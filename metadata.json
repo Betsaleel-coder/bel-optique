@@ -1,0 +1,5 @@
+{
+  "name": "Bel'Optique",
+  "description": "A modern frontend prototype for a premium optical store in Congo.",
+  "requestFramePermissions": ["camera"]
+}
