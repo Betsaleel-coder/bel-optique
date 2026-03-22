@@ -22,7 +22,6 @@ export default function Navbar() {
     { name: t('nav.appointment'), path: '/appointment' },
     { name: t('home.news_title'), path: '/news' },
     { name: t('nav.location'), path: '/location' },
-    { name: 'Admin', path: '/admin' },
   ];
 
   const isActive = (path: string) => location.pathname === path;
