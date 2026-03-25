@@ -1,4 +1,5 @@
-import { MapPin, Clock, Phone, Mail } from 'lucide-react';
+import { MapPin, Clock, Mail } from 'lucide-react';
+import WhatsAppIcon from '../components/WhatsAppIcon';
 import { useLanguage } from '../contexts/LanguageContext';
 
 export default function Location() {
@@ -46,7 +47,7 @@ export default function Location() {
 
               <div className="flex items-start">
                 <div className="w-12 h-12 bg-bel-gray rounded-full flex items-center justify-center mr-6 flex-shrink-0 text-bel-accent">
-                  <Phone size={24} />
+                  <WhatsAppIcon size={24} />
                 </div>
                 <div>
                   <h3 className="font-medium text-lg mb-2">Contact</h3>
@@ -89,7 +90,7 @@ export default function Location() {
 
               <div className="flex items-start">
                 <div className="w-12 h-12 bg-bel-gray rounded-full flex items-center justify-center mr-6 flex-shrink-0 text-bel-accent">
-                  <Phone size={24} />
+                  <WhatsAppIcon size={24} />
                 </div>
                 <div>
                   <h3 className="font-medium text-lg mb-2">Contact</h3>

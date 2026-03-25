@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
-import { Facebook, Instagram, Linkedin, MapPin, Phone, Mail } from 'lucide-react';
+import { Facebook, Instagram, Linkedin, MapPin, Mail } from 'lucide-react';
+import WhatsAppIcon from './WhatsAppIcon';
 import { useLanguage } from '../contexts/LanguageContext';
 import logo from '../assets/logo.png';
 
@@ -86,7 +87,7 @@ export default function Footer() {
                 <span><strong>{t('app.city') || 'Brazzaville'}:</strong> Hôtel Saphir<br /><strong>{t('app.city') ? 'Pointe-Noire' : 'Pointe-Noire'}:</strong> Marché Plateau</span>
               </li>
               <li className="flex items-center">
-                <Phone size={18} className="mr-3 flex-shrink-0 text-bel-accent" />
+                <WhatsAppIcon size={18} className="mr-3 flex-shrink-0 text-bel-accent" />
                 <span>+242 04 474 4456</span>
               </li>
               <li className="flex items-center">

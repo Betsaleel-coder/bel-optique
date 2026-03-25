@@ -46,7 +46,7 @@ export default function Navbar() {
               <img
                 src={logo}
                 alt="Bel'Optique"
-                className="h-16 md:h-20 w-auto"
+                className="h-20 md:h-28 w-auto"
               />
             </Link>
           </div>

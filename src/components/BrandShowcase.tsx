@@ -1,13 +1,18 @@
 import { motion } from 'framer-motion';
 import { useLanguage } from '../contexts/LanguageContext';
 
+import raybanLogo from '../assets/ray ban.png';
+import bossLogo from '../assets/Hugo-Boss-Logo.png';
+import versaceLogo from '../assets/Versace.png';
+import gucciLogo from '../assets/Gucci-Logo.wine.png';
+import oakleyLogo from '../assets/Oakley.jpg';
+
 const brands = [
-    { name: 'Ray-Ban', logo: 'https://upload.wikimedia.org/wikipedia/commons/e/e0/Ray-Ban_logo.svg' },
-    { name: 'Boss', logo: 'https://upload.wikimedia.org/wikipedia/commons/d/de/Hugo_Boss_logo.svg' },
-    { name: 'Versace', logo: 'https://upload.wikimedia.org/wikipedia/commons/e/e4/Versace_logo.svg' },
-    { name: 'Prada', logo: 'https://upload.wikimedia.org/wikipedia/commons/b/b8/Prada-Logo.svg' },
-    { name: 'Gucci', logo: 'https://upload.wikimedia.org/wikipedia/commons/7/79/Gucci_Logo.svg' },
-    { name: 'Oakley', logo: 'https://upload.wikimedia.org/wikipedia/commons/3/3d/Oakley_logo.svg' },
+    { name: 'Ray-Ban', logo: raybanLogo },
+    { name: 'Boss', logo: bossLogo },
+    { name: 'Versace', logo: versaceLogo },
+    { name: 'Gucci', logo: gucciLogo },
+    { name: 'Oakley', logo: oakleyLogo },
 ];
 
 export default function BrandShowcase() {

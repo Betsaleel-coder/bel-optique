@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Send, MessageCircle, Mail, MapPin } from 'lucide-react';
+import { Send, Mail, MapPin } from 'lucide-react';
+import WhatsAppIcon from '../components/WhatsAppIcon';
 import { motion } from 'framer-motion';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -37,7 +38,7 @@ export default function Contact() {
               <div className="space-y-8">
                 <div className="flex items-start">
                   <div className="w-12 h-12 bg-bel-gray rounded-full flex items-center justify-center mr-6 flex-shrink-0 text-bel-accent">
-                    <MessageCircle size={24} />
+                    <WhatsAppIcon size={24} />
                   </div>
                   <div>
                     <h3 className="font-medium text-lg mb-2">WhatsApp</h3>
@@ -50,7 +51,7 @@ export default function Contact() {
                       rel="noopener noreferrer"
                       className="inline-flex items-center text-bel-accent font-medium hover:text-bel-dark transition-colors"
                     >
-                      +242 04 474 4456 <MessageCircle size={18} className="ml-2" />
+                      +242 04 474 4456 <WhatsAppIcon size={18} className="ml-2" />
                     </a>
                   </div>
                 </div>
