@@ -7,6 +7,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { supabase } from '../lib/supabase';
 import BrandShowcase from '../components/BrandShowcase';
 import Testimonials from '../components/Testimonials';
+import artLensLogo from '../assets/logo-france-clair-1 (1).webp';
 
 export default function Home() {
   const { t } = useLanguage();
@@ -128,7 +129,13 @@ export default function Home() {
       <section className="py-12 bg-bel-dark text-bel-light border-b border-bel-light/10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <p className="text-sm font-bold tracking-widest uppercase text-bel-accent mb-4">{t('home.partner_title')}</p>
-          <h2 className="font-serif text-2xl sm:text-3xl md:text-4xl font-bold mb-4">Art Lens</h2>
+          <div className="flex justify-center mb-6">
+            <img 
+              src={artLensLogo} 
+              alt="Art Lens" 
+              className="h-16 md:h-20 w-auto object-contain filter brightness-0 invert opacity-90" 
+            />
+          </div>
           <p className="text-bel-light/70 max-w-2xl mx-auto text-lg">
             {t('home.partner_desc')}
           </p>

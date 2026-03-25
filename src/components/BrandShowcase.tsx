@@ -3,6 +3,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 
 import raybanLogo from '../assets/ray ban.png';
 import bossLogo from '../assets/Hugo-Boss-Logo.png';
+import pradaLogo from '../assets/PRADA.webp';
 import versaceLogo from '../assets/Versace.png';
 import gucciLogo from '../assets/Gucci-Logo.wine.png';
 import oakleyLogo from '../assets/Oakley.jpg';
@@ -10,6 +11,7 @@ import oakleyLogo from '../assets/Oakley.jpg';
 const brands = [
     { name: 'Ray-Ban', logo: raybanLogo },
     { name: 'Boss', logo: bossLogo },
+    { name: 'Prada', logo: pradaLogo },
     { name: 'Versace', logo: versaceLogo },
     { name: 'Gucci', logo: gucciLogo },
     { name: 'Oakley', logo: oakleyLogo },
