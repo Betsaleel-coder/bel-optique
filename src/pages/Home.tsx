@@ -8,6 +8,7 @@ import { supabase } from '../lib/supabase';
 import BrandShowcase from '../components/BrandShowcase';
 import Testimonials from '../components/Testimonials';
 import artLensLogo from '../assets/logo-france-clair-1 (1).webp';
+import WhatsAppIcon from '../components/WhatsAppIcon';
 
 export default function Home() {
   const { t } = useLanguage();
@@ -204,6 +205,17 @@ export default function Home() {
                     </span>
                   )}
                   <img src={product.image} alt={product.name} loading="lazy" className="w-full h-full object-cover mix-blend-multiply transform group-hover:scale-105 transition-transform duration-500" />
+                  
+                  {/* WhatsApp Overlay Icon */}
+                  <a
+                    href={`https://wa.me/242044744456?text=${encodeURIComponent(t('wa.interest').replace('{name}', product.name))}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="absolute bottom-4 right-4 bg-white/90 backdrop-blur-sm p-2 rounded-full shadow-lg text-[#25D366] transform translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300 hover:bg-[#25D366] hover:text-white z-20"
+                    aria-label="Demander sur WhatsApp"
+                  >
+                    <WhatsAppIcon size={20} />
+                  </a>
                 </div>
                 <div className="text-xs text-bel-accent font-semibold uppercase tracking-wider mb-1">{product.brand} • {product.category}</div>
                 <h3 className="font-serif text-lg font-medium text-bel-dark mb-1">{product.name}</h3>

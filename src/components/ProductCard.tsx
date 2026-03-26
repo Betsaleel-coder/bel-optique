@@ -1,7 +1,6 @@
-import { Link } from 'react-router-dom';
-import { MessageCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useLanguage } from '../contexts/LanguageContext';
+import WhatsAppIcon from './WhatsAppIcon';
 
 interface ProductCardProps {
   id: string;
@@ -32,6 +31,17 @@ export default function ProductCard({ id, name, brand, image, category, isNew }:
           className="w-full h-full object-contain transform group-hover:scale-105 transition-transform duration-500"
           referrerPolicy="no-referrer"
         />
+        
+        {/* WhatsApp Overlay Icon */}
+        <a
+          href={`https://wa.me/242044744456?text=${encodeURIComponent(t('wa.interest').replace('{name}', name))}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="absolute bottom-4 right-4 bg-white/90 backdrop-blur-sm p-2 rounded-full shadow-lg text-[#25D366] transform translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300 hover:bg-[#25D366] hover:text-white z-20"
+          aria-label="Demander sur WhatsApp"
+        >
+          <WhatsAppIcon size={20} />
+        </a>
 
       </div>
 
@@ -51,7 +61,7 @@ export default function ProductCard({ id, name, brand, image, category, isNew }:
             className="text-bel-dark/50 hover:text-[#25D366] transition-colors"
             aria-label="Demander sur WhatsApp"
           >
-            <MessageCircle size={24} />
+            <WhatsAppIcon size={24} />
           </a>
         </div>
       </div>
