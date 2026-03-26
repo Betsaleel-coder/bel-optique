@@ -21,6 +21,7 @@ export default function Navbar() {
     { name: t('nav.appointment'), path: '/appointment' },
     { name: t('home.news_title'), path: '/news' },
     { name: t('nav.location'), path: '/location' },
+    { name: t('nav.contact'), path: '/contact' },
   ];
 
   const isActive = (path: string) => location.pathname === path;
@@ -77,15 +78,15 @@ export default function Navbar() {
               <Globe size={18} />
               <span className="uppercase">{language}</span>
             </button>
-            <button className="text-bel-dark hover:text-bel-accent transition-colors hidden sm:block">
+            <Link to="/catalog" className="text-bel-dark hover:text-bel-accent transition-colors hidden sm:block">
               <Search size={20} />
-            </button>
-            <button className="text-bel-dark hover:text-bel-accent transition-colors hidden sm:block">
+            </Link>
+            <Link to="/admin" className="text-bel-dark hover:text-bel-accent transition-colors hidden sm:block">
               <User size={20} />
-            </button>
-            <button className="text-bel-dark hover:text-bel-accent transition-colors">
+            </Link>
+            <Link to="/location" className="text-bel-dark hover:text-bel-accent transition-colors">
               <ShoppingBag size={20} />
-            </button>
+            </Link>
           </div>
         </div>
       </div>

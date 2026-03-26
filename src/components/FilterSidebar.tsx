@@ -49,6 +49,7 @@ export default function FilterSidebar({ categories, selectedFilters, onFilterCha
                     <label
                       key={option.id}
                       className="flex items-center cursor-pointer group"
+                      onClick={() => onFilterChange(category.id, option.id)}
                     >
                       <div
                         className={clsx(

@@ -58,7 +58,6 @@ export default function AppointmentForm() {
   };
 
   const services = [
-    t('svc.exam'),
     t('svc.style'),
     t('svc.repair'),
     t('svc.lens'),

@@ -44,6 +44,7 @@ export default function Catalog() {
   const [selectedFilters, setSelectedFilters] = useState<Record<string, string[]>>({});
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     fetchProducts();
@@ -58,6 +59,7 @@ export default function Catalog() {
         name: p.name,
         brand: p.brand,
         category: p.category,
+        gender: p.gender || 'Unisex',
         image: p.image_url,
         isNew: p.is_new,
       }));
@@ -76,6 +78,39 @@ export default function Catalog() {
       return { ...prev, [categoryId]: updated };
     });
   };
+
+  const filteredProducts = products.filter(product => {
+    // Search filter
+    if (searchQuery && !product.name.toLowerCase().includes(searchQuery.toLowerCase()) && !product.brand.toLowerCase().includes(searchQuery.toLowerCase())) {
+      return false;
+    }
+
+    // Genre filter
+    if (selectedFilters.genre?.length) {
+      const match = selectedFilters.genre.some(g => 
+        (product.gender && product.gender.toLowerCase() === g.toLowerCase()) ||
+        product.category.toLowerCase().includes(g.toLowerCase()) || 
+        product.name.toLowerCase().includes(g.toLowerCase())
+      );
+      if (!match) return false;
+    }
+
+    // Marques filter
+    if (selectedFilters.marques?.length) {
+      if (!selectedFilters.marques.some(m => product.brand.toLowerCase().includes(m.toLowerCase()))) {
+        return false;
+      }
+    }
+
+    // Type filter
+    if (selectedFilters.type?.length) {
+      if (!selectedFilters.type.some(t => product.category.toLowerCase().includes(t.toLowerCase()))) {
+        return false;
+      }
+    }
+
+    return true;
+  });
 
   return (
     <div className="bg-bel-light min-h-screen py-12">
@@ -98,12 +133,24 @@ export default function Catalog() {
 
           {/* Product Grid */}
           <div className="flex-1">
-            <div className="flex justify-between items-center mb-8">
-              <span className="text-sm text-bel-dark/70 font-medium">{products.length} {t('cat.results')}</span>
-              <select className="bg-transparent border-none text-sm font-medium text-bel-dark focus:ring-0 cursor-pointer outline-none">
-                <option>{t('cat.sort')}: {t('cat.sort_new')}</option>
-                <option>{t('cat.sort')}: {t('cat.sort_brand')}</option>
-              </select>
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+              <span className="text-sm text-bel-dark/70 font-medium">{filteredProducts.length} {t('cat.results')}</span>
+              
+              <div className="flex w-full md:w-auto items-center gap-4">
+                <div className="relative flex-1 md:w-64">
+                    <input 
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="Rechercher..."
+                        className="w-full px-4 py-2 bg-white border border-bel-dark/10 rounded-xl focus:ring-2 focus:ring-bel-accent outline-none text-sm"
+                    />
+                </div>
+                <select className="bg-transparent border-none text-sm font-medium text-bel-dark focus:ring-0 cursor-pointer outline-none">
+                  <option>{t('cat.sort')}: {t('cat.sort_new')}</option>
+                  <option>{t('cat.sort')}: {t('cat.sort_brand')}</option>
+                </select>
+              </div>
             </div>
 
             {loading ? (
@@ -111,7 +158,7 @@ export default function Catalog() {
                 <div className="w-8 h-8 border-4 border-bel-accent border-t-transparent rounded-full animate-spin"></div>
               </div>
             ) : (
-              <ProductGrid products={products} />
+              <ProductGrid products={filteredProducts} />
             )}
 
             {/* Pagination Placeholder */}

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, X, Image as ImageIcon, LogIn, LogOut, Package, Calendar, Clock, CheckCircle2, XCircle, TrendingUp, Star, Percent, Users } from 'lucide-react';
+import { Plus, Edit2, Trash2, X, Image as ImageIcon, LogIn, LogOut, Package, Calendar, Clock, CheckCircle2, XCircle, TrendingUp, Star, Percent, Users, MessageSquare, Mail, Eye } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
+import clsx from 'clsx';
 
 export default function AdminDashboard() {
     // Auth state
@@ -12,14 +13,16 @@ export default function AdminDashboard() {
     const [loginError, setLoginError] = useState('');
 
     // Dashboard state
-    const [activeTab, setActiveTab] = useState<'products' | 'appointments'>('products');
+    const [activeTab, setActiveTab] = useState<'products' | 'appointments' | 'reviews' | 'messages'>('products');
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState({
         totalProducts: 0,
         totalAppointments: 0,
         pendingAppointments: 0,
         promoProducts: 0,
-        featuredProducts: 0
+        featuredProducts: 0,
+        pendingReviews: 0,
+        unreadMessages: 0
     });
 
     // Products state
@@ -30,6 +33,7 @@ export default function AdminDashboard() {
         name: '',
         brand: '',
         category: 'Solaires',
+        gender: 'Unisex',
         price: 0,
         image_url: '',
         is_new: false,
@@ -37,9 +41,17 @@ export default function AdminDashboard() {
         is_featured: false,
         description: '',
     });
+    const [imageFile, setImageFile] = useState<File | null>(null);
+    const [uploading, setUploading] = useState(false);
 
     // Appointments state
     const [appointments, setAppointments] = useState<any[]>([]);
+
+    // Reviews state
+    const [reviews, setReviews] = useState<any[]>([]);
+
+    // Messages state
+    const [messages, setMessages] = useState<any[]>([]);
 
     useEffect(() => {
         supabase.auth.getSession().then(({ data: { session } }) => {
@@ -55,9 +67,16 @@ export default function AdminDashboard() {
         if (session) {
             if (activeTab === 'products') {
                 fetchProducts();
-            } else {
+            } else if (activeTab === 'appointments') {
                 fetchAppointments();
+            } else if (activeTab === 'reviews') {
+                fetchReviews();
+            } else {
+                fetchMessages();
             }
+            
+            // Always fetch counts for notifications
+            fetchPendingCounts();
         }
     }, [session, activeTab]);
 
@@ -89,16 +108,71 @@ export default function AdminDashboard() {
         setLoading(false);
     }
 
+    async function fetchPendingCounts() {
+        const { count: pendingApps } = await supabase.from('appointments').select('*', { count: 'exact', head: true }).eq('status', 'pending');
+        const { count: pendingRevs } = await supabase.from('reviews').select('*', { count: 'exact', head: true }).eq('status', 'pending');
+        const { count: unreadMsgs } = await supabase.from('contacts').select('*', { count: 'exact', head: true }).eq('status', 'unread');
+        setStats(prev => ({
+            ...prev,
+            pendingAppointments: pendingApps || 0,
+            pendingReviews: pendingRevs || 0,
+            unreadMessages: unreadMsgs || 0
+        }));
+    }
+
+    async function fetchReviews() {
+        setLoading(true);
+        const { data, error } = await supabase.from('reviews').select('*').order('created_at', { ascending: false });
+        if (data) setReviews(data);
+        setLoading(false);
+    }
+
+    const handleApproveReview = async (id: string) => {
+        const { error } = await supabase.from('reviews').update({ status: 'approved' }).eq('id', id);
+        if (!error) {
+            fetchReviews();
+            fetchPendingCounts();
+        }
+    };
+
+    const handleDeleteReview = async (id: string) => {
+        if (!window.confirm('Supprimer cet avis ?')) return;
+        const { error } = await supabase.from('reviews').delete().eq('id', id);
+        if (!error) {
+            fetchReviews();
+            fetchPendingCounts();
+        }
+    };
+
+    async function fetchMessages() {
+        setLoading(true);
+        const { data, error } = await supabase.from('contacts').select('*').order('created_at', { ascending: false });
+        if (data) setMessages(data);
+        setLoading(false);
+    }
+
+    const handleMarkAsRead = async (id: string) => {
+        const { error } = await supabase.from('contacts').update({ status: 'read' }).eq('id', id);
+        if (!error) {
+            fetchMessages();
+            fetchPendingCounts();
+        }
+    };
+
+    const handleDeleteMessage = async (id: string) => {
+        if (!window.confirm('Supprimer ce message ?')) return;
+        const { error } = await supabase.from('contacts').delete().eq('id', id);
+        if (!error) {
+            fetchMessages();
+            fetchPendingCounts();
+        }
+    };
+
     async function fetchAppointments() {
         setLoading(true);
         const { data, error } = await supabase.from('appointments').select('*').order('date', { ascending: false });
         if (data) {
             setAppointments(data);
-            setStats(prev => ({
-                ...prev,
-                totalAppointments: data.length,
-                pendingAppointments: data.filter(a => a.status === 'pending').length
-            }));
         }
         setLoading(false);
     }
@@ -119,6 +193,7 @@ export default function AdminDashboard() {
                 name: product.name || '',
                 brand: product.brand || '',
                 category: product.category || 'Solaires',
+                gender: product.gender || 'Unisex',
                 price: product.price || 0,
                 image_url: product.image_url || '',
                 is_new: product.is_new || false,
@@ -132,6 +207,7 @@ export default function AdminDashboard() {
                 name: '',
                 brand: '',
                 category: 'Solaires',
+                gender: 'Unisex',
                 price: 0,
                 image_url: '',
                 is_new: false,
@@ -140,6 +216,7 @@ export default function AdminDashboard() {
                 description: '',
             });
         }
+        setImageFile(null);
         setIsModalOpen(true);
     };
 
@@ -150,18 +227,47 @@ export default function AdminDashboard() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setLoading(true);
         try {
+            let finalImageUrl = formData.image_url;
+
+            // Upload image if a new file is selected
+            if (imageFile) {
+                setUploading(true);
+                const fileExt = imageFile.name.split('.').pop();
+                const fileName = `${Math.random()}.${fileExt}`;
+                const filePath = `products/${fileName}`;
+
+                const { error: uploadError } = await supabase.storage
+                    .from('products')
+                    .upload(filePath, imageFile);
+
+                if (uploadError) throw uploadError;
+
+                const { data: { publicUrl } } = supabase.storage
+                    .from('products')
+                    .getPublicUrl(filePath);
+                
+                finalImageUrl = publicUrl;
+                setUploading(false);
+            }
+
+            const submissionData = { ...formData, image_url: finalImageUrl };
+
             if (editingId) {
-                const { error } = await supabase.from('products').update(formData).eq('id', editingId);
+                const { error } = await supabase.from('products').update(submissionData).eq('id', editingId);
                 if (error) throw error;
             } else {
-                const { error } = await supabase.from('products').insert([formData]);
+                const { error } = await supabase.from('products').insert([submissionData]);
                 if (error) throw error;
             }
             handleCloseModal();
             fetchProducts();
         } catch (err: any) {
             alert(`Erreur: ${err.message}`);
+            setUploading(false);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -177,7 +283,8 @@ export default function AdminDashboard() {
         }
     };
 
-    const categories = ['Solaires', 'Médicales', 'Homme', 'Femme', 'Enfants', 'Accessoires'];
+    const categories = ['Solaires', 'Médicales', 'Accessoires'];
+    const genders = ['Homme', 'Femme', 'Enfants', 'Unisex'];
 
     if (!session) {
         return (
@@ -248,20 +355,45 @@ export default function AdminDashboard() {
                         </button>
                     </div>
 
-                    <div className="flex space-x-8">
+                    <div className="flex space-x-4">
                         <button
                             onClick={() => setActiveTab('products')}
-                            className={`pb-4 text-sm font-medium border-b-2 transition-colors flex items-center ${activeTab === 'products' ? 'border-bel-dark text-bel-dark' : 'border-transparent text-gray-500 hover:text-bel-dark hover:border-gray-300'
-                                }`}
+                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'products' ? 'bg-bel-dark text-white' : 'text-gray-500 hover:text-bel-dark'}`}
                         >
-                            <Package size={18} className="mr-2" /> Produits
+                            <Package size={18} className="inline-block mr-2" /> Produits
                         </button>
                         <button
                             onClick={() => setActiveTab('appointments')}
-                            className={`pb-4 text-sm font-medium border-b-2 transition-colors flex items-center ${activeTab === 'appointments' ? 'border-bel-dark text-bel-dark' : 'border-transparent text-gray-500 hover:text-bel-dark hover:border-gray-300'
-                                }`}
+                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors relative ${activeTab === 'appointments' ? 'bg-bel-dark text-white' : 'text-gray-500 hover:text-bel-dark'}`}
                         >
-                            <Calendar size={18} className="mr-2" /> Rendez-vous
+                            <Calendar size={18} className="inline-block mr-2" /> Rendez-vous
+                            {stats.pendingAppointments > 0 && (
+                                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center animate-pulse">
+                                    {stats.pendingAppointments}
+                                </span>
+                            )}
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('reviews')}
+                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors relative ${activeTab === 'reviews' ? 'bg-bel-dark text-white' : 'text-gray-500 hover:text-bel-dark'}`}
+                        >
+                            <Users size={18} className="inline-block mr-2" /> Avis
+                            {stats.pendingReviews > 0 && (
+                                <span className="absolute -top-1 -right-1 bg-bel-accent text-bel-dark text-[10px] w-4 h-4 rounded-full flex items-center justify-center animate-pulse font-bold">
+                                    {stats.pendingReviews}
+                                </span>
+                            )}
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('messages')}
+                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors relative ${activeTab === 'messages' ? 'bg-bel-dark text-white' : 'text-gray-500 hover:text-bel-dark'}`}
+                        >
+                            <MessageSquare size={18} className="inline-block mr-2" /> Messages
+                            {stats.unreadMessages > 0 && (
+                                <span className="absolute -top-1 -right-1 bg-bel-accent text-bel-dark text-[10px] w-4 h-4 rounded-full flex items-center justify-center animate-pulse font-bold">
+                                    {stats.unreadMessages}
+                                </span>
+                            )}
                         </button>
                     </div>
                 </div>
@@ -548,7 +680,7 @@ export default function AdminDashboard() {
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                     <div>
                                         <label className="block text-sm font-medium text-bel-dark/70 mb-2">Catégorie</label>
                                         <select
@@ -558,6 +690,18 @@ export default function AdminDashboard() {
                                         >
                                             {categories.map((cat) => (
                                                 <option key={cat} value={cat}>{cat}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-bel-dark/70 mb-2">Genre (Public)</label>
+                                        <select
+                                            value={formData.gender}
+                                            onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+                                            className="w-full px-4 py-3 bg-bel-gray/30 border border-gray-200 rounded-xl focus:ring-2 focus:ring-bel-accent outline-none transition-all"
+                                        >
+                                            {genders.map((g) => (
+                                                <option key={g} value={g}>{g}</option>
                                             ))}
                                         </select>
                                     </div>
@@ -575,12 +719,28 @@ export default function AdminDashboard() {
 
                                 <div>
                                     <label className="block text-sm font-medium text-bel-dark/70 mb-2">Image URL</label>
-                                    <input
-                                        type="text"
-                                        value={formData.image_url}
-                                        onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-                                        className="w-full px-4 py-3 bg-bel-gray/30 border border-gray-200 rounded-xl focus:ring-2 focus:ring-bel-accent outline-none transition-all"
-                                    />
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-xs font-bold text-bel-dark/60 uppercase tracking-widest mb-2">Image (URL)</label>
+                                            <input
+                                                type="url"
+                                                value={formData.image_url}
+                                                onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
+                                                className="w-full px-4 py-3 bg-bel-gray/30 border border-gray-100 rounded-xl focus:ring-2 focus:ring-bel-accent outline-none text-sm"
+                                                placeholder="https://..."
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-bold text-bel-dark/60 uppercase tracking-widest mb-2">Ou Upload Local</label>
+                                            <input
+                                                type="file"
+                                                accept="image/*"
+                                                onChange={(e) => setImageFile(e.target.files ? e.target.files[0] : null)}
+                                                className="w-full px-4 py-2.5 bg-bel-gray/30 border border-gray-100 rounded-xl focus:ring-2 focus:ring-bel-accent outline-none text-xs"
+                                            />
+                                            {uploading && <p className="text-[10px] text-bel-accent mt-1 animate-pulse">Chargement de l'image...</p>}
+                                        </div>
+                                    </div>
                                     {formData.image_url && (
                                         <div className="mt-3 w-24 h-24 rounded-xl border border-gray-200 overflow-hidden bg-bel-gray">
                                             <img src={formData.image_url} alt="Aperçu" className="w-full h-full object-cover mix-blend-multiply" />
@@ -648,6 +808,139 @@ export default function AdminDashboard() {
                     </div>
                 )}
             </AnimatePresence>
+            {activeTab === 'reviews' && (
+                <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="bg-white rounded-3xl shadow-xl border border-bel-dark/5 overflow-hidden">
+                    <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-bel-gray/50">
+                            <tr className="text-bel-dark text-xs tracking-wider uppercase">
+                                <th className="px-6 py-4 text-left font-medium">Client</th>
+                                <th className="px-6 py-4 text-left font-medium">Avis</th>
+                                <th className="px-6 py-4 text-left font-medium">Note</th>
+                                <th className="px-6 py-4 text-left font-medium">Statut</th>
+                                <th className="px-6 py-4 text-right font-medium">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-100">
+                            {reviews.length === 0 ? (
+                                <tr><td colSpan={5} className="px-6 py-12 text-center text-bel-dark/50 italic">Aucun avis reçu.</td></tr>
+                            ) : (
+                                reviews.map((review) => (
+                                    <tr key={review.id} className="hover:bg-bel-gray/50 transition-colors">
+                                        <td className="px-6 py-4">
+                                            <div className="text-sm font-bold text-bel-dark">{review.name}</div>
+                                            <div className="text-xs text-gray-500">{review.email}</div>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <div className="text-sm text-gray-600 line-clamp-2 max-w-xs">{review.comment}</div>
+                                            <div className="text-[10px] text-gray-400 mt-1">{new Date(review.created_at).toLocaleDateString()}</div>
+                                        </td>
+                                        <td className="px-6 py-4 text-bel-accent">
+                                            <div className="flex items-center">
+                                                {Array.from({ length: 5 }).map((_, i) => (
+                                                    <Star key={i} size={14} className={i < review.rating ? 'fill-current' : 'text-gray-200'} />
+                                                ))}
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${review.status === 'approved' ? 'bg-green-100 text-green-800' : review.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>
+                                                {review.status === 'approved' ? 'Publié' : review.status === 'pending' ? 'En attente' : 'Refusé'}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
+                                            <div className="flex justify-end space-x-2">
+                                                {review.status === 'pending' && (
+                                                    <button
+                                                        onClick={() => handleApproveReview(review.id)}
+                                                        className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors shadow-sm"
+                                                        title="Approuver"
+                                                    >
+                                                        <CheckCircle2 size={18} />
+                                                    </button>
+                                                )}
+                                                <button
+                                                    onClick={() => handleDeleteReview(review.id)}
+                                                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors shadow-sm"
+                                                    title="Supprimer"
+                                                >
+                                                    <Trash2 size={18} />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </motion.div>
+            )}
+
+            {activeTab === 'messages' && (
+                <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="bg-white rounded-3xl shadow-xl border border-bel-dark/5 overflow-hidden">
+                    <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-bel-gray/50">
+                            <tr className="text-bel-dark text-xs tracking-wider uppercase">
+                                <th className="px-6 py-4 text-left font-medium">Expéditeur</th>
+                                <th className="px-6 py-4 text-left font-medium">Message</th>
+                                <th className="px-6 py-4 text-left font-medium">Statut</th>
+                                <th className="px-6 py-4 text-right font-medium">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-100">
+                            {messages.length === 0 ? (
+                                <tr><td colSpan={4} className="px-6 py-12 text-center text-bel-dark/50 italic">Aucun message reçu.</td></tr>
+                            ) : (
+                                messages.map((msg) => (
+                                    <tr key={msg.id} className={clsx("hover:bg-bel-gray/50 transition-colors", msg.status === 'unread' ? "bg-bel-accent/5" : "")}>
+                                        <td className="px-6 py-4">
+                                            <div className="text-sm font-bold text-bel-dark flex items-center">
+                                                {msg.status === 'unread' && <div className="w-2 h-2 bg-bel-accent rounded-full mr-2 animate-pulse"></div>}
+                                                {msg.name}
+                                            </div>
+                                            <div className="text-xs text-gray-500">{msg.email}</div>
+                                            {msg.phone && (
+                                                <div className="text-xs text-green-600 font-medium flex items-center mt-1">
+                                                    <span className="w-1.5 h-1.5 bg-green-500 rounded-full mr-1.5"></span>
+                                                    {msg.phone}
+                                                </div>
+                                            )}
+                                            <div className="text-[10px] text-gray-400 mt-1">{new Date(msg.created_at).toLocaleDateString()}</div>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <div className="text-sm font-semibold text-bel-dark mb-1">{msg.subject || 'Sans objet'}</div>
+                                            <div className="text-sm text-gray-600 line-clamp-2 max-w-sm" title={msg.message}>{msg.message}</div>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${msg.status === 'read' ? 'bg-gray-100 text-gray-600' : 'bg-bel-accent text-bel-dark'}`}>
+                                                {msg.status === 'read' ? 'Lu' : 'Nouveau'}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
+                                            <div className="flex justify-end space-x-2">
+                                                {msg.status === 'unread' && (
+                                                    <button
+                                                        onClick={() => handleMarkAsRead(msg.id)}
+                                                        className="p-2 text-bel-dark hover:bg-bel-accent/10 rounded-lg transition-colors shadow-sm"
+                                                        title="Marquer comme lu"
+                                                    >
+                                                        <Eye size={18} />
+                                                    </button>
+                                                )}
+                                                <button
+                                                    onClick={() => handleDeleteMessage(msg.id)}
+                                                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors shadow-sm"
+                                                    title="Supprimer"
+                                                >
+                                                    <Trash2 size={18} />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </motion.div>
+            )}
         </div>
     );
 }

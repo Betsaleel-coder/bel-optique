@@ -1,6 +1,8 @@
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Star, Quote } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
+import { supabase } from '../lib/supabase';
 
 const testimonials = [
     {
@@ -25,6 +27,30 @@ const testimonials = [
 
 export default function Testimonials() {
     const { t } = useLanguage();
+    const [dynamicTestimonials, setDynamicTestimonials] = useState<any[]>([]);
+
+    useEffect(() => {
+        fetchApprovedReviews();
+    }, []);
+
+    async function fetchApprovedReviews() {
+        const { data, error } = await supabase
+            .from('reviews')
+            .select('*')
+            .eq('status', 'approved')
+            .order('created_at', { ascending: false });
+        
+        if (data && data.length > 0) {
+            setDynamicTestimonials(data);
+        } else {
+            setDynamicTestimonials(testimonials.map(t => ({
+                name: t.name,
+                comment: t.text,
+                rating: t.rating,
+                created_at: new Date().toISOString()
+            })));
+        }
+    }
 
     return (
         <section className="py-24 bg-bel-gray/30">
@@ -36,8 +62,8 @@ export default function Testimonials() {
                     <div className="w-24 h-1 bg-bel-accent mx-auto"></div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                    {testimonials.map((testimonial, index) => (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    {dynamicTestimonials.map((testimonial, index) => (
                         <motion.div
                             key={index}
                             initial={{ opacity: 0, y: 20 }}
@@ -59,13 +85,13 @@ export default function Testimonials() {
                             </div>
 
                             <p className="text-bel-dark/80 italic mb-6 leading-relaxed">
-                                "{testimonial.text}"
+                                "{testimonial.comment || testimonial.text}"
                             </p>
 
                             <div>
                                 <h4 className="font-bold text-bel-dark">{testimonial.name}</h4>
                                 <p className="text-xs text-bel-accent font-medium uppercase tracking-wider">
-                                    {testimonial.city}
+                                    {testimonial.city || "Avis Client"}
                                 </p>
                             </div>
                         </motion.div>
