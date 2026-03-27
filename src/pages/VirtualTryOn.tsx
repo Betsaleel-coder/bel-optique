@@ -23,6 +23,7 @@ export default function VirtualTryOn() {
   const [isFlashActive, setIsFlashActive] = useState(false);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
+  const [photoDimensions, setPhotoDimensions] = useState<{ width: number, height: number } | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
   const landmarksRef = useRef<any>(null);
@@ -177,12 +178,14 @@ export default function VirtualTryOn() {
     const img = new Image();
     img.onload = async () => {
       try {
-        const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.3 });
+        // Use a larger input size for static photo for better precision
+        const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.3 });
         const result = await faceapi.detectSingleFace(img, options).withFaceLandmarks();
         if (result) {
           const pts = result.landmarks.positions;
           const vw = img.width;
           const vh = img.height;
+          setPhotoDimensions({ width: vw, height: vh });
           const lm = pts.map((p: any) => ({ x: p.x / vw, y: p.y / vh, z: 0 }));
 
           landmarksRef.current = lm;
@@ -419,6 +422,8 @@ export default function VirtualTryOn() {
                     <ARScene
                       landmarksRef={landmarksRef}
                       videoElement={null}
+                      sourceWidth={photoDimensions?.width}
+                      sourceHeight={photoDimensions?.height}
                       imageUrl={selectedGlasses?.tryOnImage || selectedGlasses?.image}
                       productId={selectedGlasses?.id}
                       productName={selectedGlasses?.name}
