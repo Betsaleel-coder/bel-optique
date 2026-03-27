@@ -355,38 +355,40 @@ export default function VirtualTryOn() {
 
         <div className="flex flex-col gap-8">
           {/* Main Viewer Area */}
-          <div className="flex flex-col xl:flex-row gap-4 justify-center items-center w-full max-w-7xl mx-auto">
-            <div className="w-full max-w-5xl max-h-[80vh] bg-black rounded-3xl overflow-hidden aspect-[4/3] sm:aspect-video relative shadow-2xl border border-white/10">
+          <div className="flex flex-col xl:flex-row gap-4 justify-center items-center w-full max-w-7xl mx-auto px-4">
+            <div className="w-full max-w-5xl h-[50vh] sm:h-auto sm:max-h-[80vh] bg-black rounded-3xl overflow-hidden aspect-[3/4] sm:aspect-video relative shadow-2xl border border-white/10">
               {!isCameraActive && tryOnMode !== 'photo' ? (
                 <div className="absolute inset-0 flex flex-col items-center justify-center p-4 sm:p-8 text-center bg-bel-dark/80">
                   <h3 className="font-serif text-2xl sm:text-3xl font-medium mb-8 text-white">{t('vto.title') || "Choisissez votre mode d'essai"}</h3>
                   <div className="flex flex-col sm:flex-row gap-6">
                     {/* Mode Photo */}
                     <div
-                      className="bg-white/5 p-6 rounded-3xl border border-white/10 flex flex-col items-center hover:bg-white/10 transition-colors w-64 group cursor-pointer"
+                      className="bg-white/5 p-4 sm:p-6 rounded-3xl border border-white/10 flex flex-col items-center hover:bg-white/10 transition-colors w-full sm:w-64 group cursor-pointer"
                       onClick={() => setTryOnMode('photo')}
                     >
-                      <div className="w-16 h-16 bg-bel-accent/20 rounded-full flex items-center justify-center mb-4 group-hover:bg-bel-accent transition-colors">
-                        <ImageIcon size={32} className="text-bel-accent group-hover:text-bel-dark transition-colors" />
+                      <div className="w-12 h-12 sm:w-16 sm:h-16 bg-bel-accent/20 rounded-full flex items-center justify-center mb-3 sm:mb-4 group-hover:bg-bel-accent transition-colors">
+                        <ImageIcon size={24} className="text-bel-accent group-hover:text-bel-dark transition-colors sm:hidden" />
+                        <ImageIcon size={32} className="text-bel-accent group-hover:text-bel-dark transition-colors hidden sm:block" />
                       </div>
-                      <h4 className="text-xl font-bold mb-2 text-white">Mode Photo</h4>
-                      <p className="text-sm text-bel-light/60 mb-6 flex-grow">Uploadez une photo de face pour un essai statique ultra-précis.</p>
-                      <button className="w-full bg-bel-accent text-bel-dark px-4 py-2 rounded-full font-bold hover:scale-105 transition-transform">
+                      <h4 className="text-lg sm:text-xl font-bold mb-1 sm:mb-2 text-white">Mode Photo</h4>
+                      <p className="text-xs sm:text-sm text-bel-light/60 mb-4 sm:mb-6 flex-grow">Uploadez une photo de face pour un essai statique ultra-précis.</p>
+                      <button className="w-full bg-bel-accent text-bel-dark px-4 py-2 rounded-full font-bold hover:scale-105 transition-transform text-sm sm:text-base">
                         Choisir
                       </button>
                     </div>
 
                     {/* Mode Video */}
                     <div
-                      className="bg-white/5 p-6 rounded-3xl border border-white/10 flex flex-col items-center hover:bg-white/10 transition-colors w-64 group cursor-pointer"
+                      className="bg-white/5 p-4 sm:p-6 rounded-3xl border border-white/10 flex flex-col items-center hover:bg-white/10 transition-colors w-full sm:w-64 group cursor-pointer"
                       onClick={() => { setTryOnMode('video'); setIsCameraActive(true); }}
                     >
-                      <div className="w-16 h-16 bg-bel-accent/20 rounded-full flex items-center justify-center mb-4 group-hover:bg-bel-accent transition-colors">
-                        <Video size={32} className="text-bel-accent group-hover:text-bel-dark transition-colors" />
+                      <div className="w-12 h-12 sm:w-16 sm:h-16 bg-bel-accent/20 rounded-full flex items-center justify-center mb-3 sm:mb-4 group-hover:bg-bel-accent transition-colors">
+                        <Video size={24} className="text-bel-accent group-hover:text-bel-dark transition-colors sm:hidden" />
+                        <Video size={32} className="text-bel-accent group-hover:text-bel-dark transition-colors hidden sm:block" />
                       </div>
-                      <h4 className="text-xl font-bold mb-2 text-white">Vidéo Live</h4>
-                      <p className="text-sm text-bel-light/60 mb-6 flex-grow">Utilisez votre webcam pour voir les lunettes en mouvement.</p>
-                      <button className="w-full bg-bel-accent text-bel-dark px-4 py-2 rounded-full font-bold hover:scale-105 transition-transform">
+                      <h4 className="text-lg sm:text-xl font-bold mb-1 sm:mb-2 text-white">Vidéo Live</h4>
+                      <p className="text-xs sm:text-sm text-bel-light/60 mb-4 sm:mb-6 flex-grow">Utilisez votre webcam pour voir les lunettes en mouvement.</p>
+                      <button className="w-full bg-bel-accent text-bel-dark px-4 py-2 rounded-full font-bold hover:scale-105 transition-transform text-sm sm:text-base">
                         Choisir
                       </button>
                     </div>
@@ -549,12 +551,12 @@ export default function VirtualTryOn() {
                   )}
                   {/* Main Action Button */}
                   {!isCalibrating && !capturedImage ? (
-                    <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-4">
+                    <div className="absolute bottom-4 sm:bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-4">
                       <button
                         onClick={handleCapture}
-                        className="bg-bel-accent text-bel-dark px-8 py-4 rounded-full font-bold shadow-xl shadow-bel-accent/20 hover:scale-105 transition-all flex items-center gap-3 pointer-events-auto"
+                        className="bg-bel-accent text-bel-dark px-6 py-3 sm:px-8 sm:py-4 rounded-full font-bold shadow-xl shadow-bel-accent/20 hover:scale-105 transition-all flex items-center gap-3 pointer-events-auto text-sm sm:text-base"
                       >
-                        <Camera size={24} />
+                        <Camera size={20} className="sm:size-6" />
                         {t('vto.capture_btn')}
                       </button>
                     </div>
