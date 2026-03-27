@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Camera, X, RefreshCw, CheckCircle, Sparkles, Ruler, Info, Share2, MessageCircle, Image as ImageIcon, Video } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { supabase } from '../lib/supabase';
+import vtoBackground from '../assets/vto-background.png';
 import ARScene from '../components/VTO/ARScene';
 // Stable face-api.js integration (CPU-only for maximum compatibility)
 
@@ -356,7 +357,10 @@ export default function VirtualTryOn() {
         <div className="flex flex-col gap-8">
           {/* Main Viewer Area */}
           <div className="flex flex-col xl:flex-row gap-4 justify-center items-center w-full max-w-7xl mx-auto">
-            <div className="w-full max-w-5xl max-h-[80vh] bg-black rounded-3xl overflow-hidden aspect-[4/3] sm:aspect-video relative shadow-2xl border border-white/10">
+            <div className="w-full max-w-5xl max-h-[80vh] bg-zinc-900 rounded-3xl overflow-hidden aspect-[4/3] sm:aspect-video relative shadow-2xl border border-white/10">
+              {/* Background Image layer */}
+              <img src={vtoBackground} className="absolute inset-0 w-full h-full object-cover opacity-60 z-0" alt="" />
+              
               {!isCameraActive && tryOnMode !== 'photo' ? (
                 <div className="absolute inset-0 flex flex-col items-center justify-center p-4 sm:p-8 text-center bg-bel-dark/80">
                   <h3 className="font-serif text-2xl sm:text-3xl font-medium mb-8 text-white">{t('vto.title') || "Choisissez votre mode d'essai"}</h3>
@@ -409,8 +413,8 @@ export default function VirtualTryOn() {
                   <button onClick={() => setTryOnMode(null)} className="mt-6 text-white/50 hover:text-white underline">Retour</button>
                 </div>
               ) : tryOnMode === 'photo' && uploadedPhoto ? (
-                <div className="absolute inset-0 bg-black flex items-center justify-center overflow-hidden">
-                  <img src={uploadedPhoto} className="absolute inset-0 w-full h-full object-contain scale-x-[-1]" alt="Uploaded face" />
+                <div className="absolute inset-0 flex items-center justify-center overflow-hidden">
+                  <img src={uploadedPhoto} className="absolute inset-0 w-full h-full object-contain scale-x-[-1] z-10" alt="Uploaded face" />
 
                   {isPhotoProcessing && (
                     <div className="absolute inset-0 flex items-center justify-center bg-black/40 z-20">
@@ -448,11 +452,11 @@ export default function VirtualTryOn() {
                   </div>
                 </div>
               ) : (
-                <div className="absolute inset-0 bg-black flex items-center justify-center">
+                <div className="absolute inset-0 flex items-center justify-center">
                   {/* Real-time Video Feed */}
                   <video
                     ref={videoRef}
-                    className="absolute inset-0 w-full h-full object-contain scale-x-[-1]"
+                    className="absolute inset-0 w-full h-full object-contain scale-x-[-1] z-10"
                     style={{ filter: 'none' }}
                     playsInline
                     autoPlay

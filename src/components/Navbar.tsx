@@ -18,8 +18,8 @@ export default function Navbar() {
 
   const navLinks: NavLink[] = [
     { name: t('nav.collections'), path: '/catalog' },
-    { name: t('nav.vto'), path: '/vto' },
     { name: t('nav.appointment'), path: '/appointment' },
+    { name: t('nav.vto'), path: '/vto' },
     { name: t('home.news_title'), path: '/news' },
     { name: t('nav.location'), path: '/location' },
     { name: t('nav.contact'), path: '/contact' },
