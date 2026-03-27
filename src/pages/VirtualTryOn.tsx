@@ -22,6 +22,7 @@ export default function VirtualTryOn() {
   const [showPdInfo, setShowPdInfo] = useState(false);
   const [isFlashActive, setIsFlashActive] = useState(false);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  const [cameraError, setCameraError] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
   const landmarksRef = useRef<any>(null);
@@ -35,6 +36,7 @@ export default function VirtualTryOn() {
 
   // ── Chargement des modèles face-api.js (CPU, pas de WebGL) ───────────────
   useEffect(() => {
+    fetchGlasses();
     const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.14/model';
     const faceapi = (window as any).faceapi;
     if (!faceapi) {
@@ -83,19 +85,37 @@ export default function VirtualTryOn() {
     let active = true;
 
     const startCamera = async () => {
+      setCameraError(null);
       try {
+        // Force cleanup of any previous stream before requesting a new one
+        if (videoRef.current?.srcObject) {
+          (videoRef.current.srcObject as MediaStream).getTracks().forEach(t => t.stop());
+          videoRef.current.srcObject = null;
+        }
+
         const stream = await navigator.mediaDevices.getUserMedia({
           video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' }
         });
-        if (!videoRef.current || !active) return;
+        if (!videoRef.current || !active) {
+          stream.getTracks().forEach(t => t.stop());
+          return;
+        }
         videoRef.current.srcObject = stream;
         await new Promise<void>(resolve => {
           videoRef.current!.onloadedmetadata = () => resolve();
         });
         await videoRef.current.play();
         processLoop();
-      } catch (err) {
+      } catch (err: any) {
         console.error('Camera error:', err);
+        if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+          setCameraError("La caméra est déjà utilisée par un autre onglet ou une autre application.");
+        } else if (err.name === 'NotAllowedError') {
+          setCameraError("L'accès à la caméra a été refusé. Veuillez autoriser l'accès dans les paramètres de votre navigateur.");
+        } else {
+          setCameraError("Impossible d'accéder à la caméra. Veuillez vérifier vos branchements.");
+        }
+        setIsCameraActive(false);
       }
     };
 
@@ -443,7 +463,25 @@ export default function VirtualTryOn() {
                     />
                   )}
 
-                  {!landmarks && (
+                  {cameraError && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/80 z-50 p-6 text-center">
+                      <div className="max-w-xs">
+                        <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <X size={32} className="text-red-500" />
+                        </div>
+                        <h3 className="text-xl font-bold mb-2">Erreur Caméra</h3>
+                        <p className="text-sm text-bel-light/70 mb-6">{cameraError}</p>
+                        <button
+                          onClick={() => setIsCameraActive(false)}
+                          className="bg-white text-black px-6 py-2 rounded-full font-bold hover:bg-bel-accent transition-colors"
+                        >
+                          Fermer
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {!landmarks && !cameraError && (
                     <div className="absolute inset-0 flex items-center justify-center bg-black/40 z-20">
                       <div className="text-center">
                         <RefreshCw className="animate-spin mx-auto mb-4 text-bel-accent" size={32} />
