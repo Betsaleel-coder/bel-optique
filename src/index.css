@@ -81,3 +81,24 @@ h6 {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* Custom Sleek Scrollbar */
+.bel-scrollbar::-webkit-scrollbar {
+  height: 6px;
+  width: 6px;
+}
+.bel-scrollbar::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 10px;
+}
+.bel-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--color-bel-accent);
+  border-radius: 10px;
+}
+.bel-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--color-bel-accent-light);
+}
+.bel-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-bel-accent) rgba(0, 0, 0, 0.05);
+}

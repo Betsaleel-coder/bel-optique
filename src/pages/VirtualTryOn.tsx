@@ -358,7 +358,7 @@ export default function VirtualTryOn() {
           <div className="flex flex-col xl:flex-row gap-4 justify-center items-center w-full max-w-7xl mx-auto px-4">
             <div className="w-full max-w-5xl h-[50vh] sm:h-auto sm:max-h-[80vh] bg-black rounded-3xl overflow-hidden aspect-[3/4] sm:aspect-video relative shadow-2xl border border-white/10">
               {!isCameraActive && tryOnMode !== 'photo' ? (
-                <div className="absolute inset-0 flex flex-col items-center justify-center p-4 sm:p-8 text-center bg-bel-dark/80 overflow-y-auto hide-scrollbar">
+                <div className="absolute inset-0 flex flex-col items-center justify-center p-4 sm:p-8 text-center bg-bel-dark/80 overflow-y-auto bel-scrollbar">
                   <h3 className="font-serif text-2xl sm:text-3xl font-medium mb-4 sm:mb-8 text-white mt-auto">{t('vto.title') || "Choisissez votre mode d'essai"}</h3>
                   <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 mb-auto">
                     {/* Mode Photo */}
@@ -623,7 +623,7 @@ export default function VirtualTryOn() {
             {/* New Horizontal Glasses Selection Carousel */}
             <div className="w-full bg-bel-light text-bel-dark rounded-3xl p-6 shadow-xl relative">
               <h3 className="font-serif text-xl font-bold mb-4">{t('vto.available_models') || "Modèles disponibles"}</h3>
-              <div className="flex gap-4 overflow-x-auto pb-4 hide-scrollbar snap-x">
+              <div className="flex gap-4 overflow-x-auto pb-4 bel-scrollbar snap-x">
                 {glassesList.map((glasses) => (
                   <button
                     key={glasses.id}
