@@ -377,7 +377,8 @@ export default function VirtualTryOn() {
                       </button>
                     </div>
 
-                    {/* Mode Video */}
+                    {/* Mode Video (Temporarily Hidden for Refinement) */}
+                    {/* 
                     <div
                       className="bg-white/5 p-4 sm:p-6 rounded-3xl border border-white/10 flex flex-col items-center hover:bg-white/10 transition-colors w-full sm:w-64 group cursor-pointer"
                       onClick={() => { setTryOnMode('video'); setIsCameraActive(true); }}
@@ -392,6 +393,7 @@ export default function VirtualTryOn() {
                         Choisir
                       </button>
                     </div>
+                    */}
                   </div>
                 </div>
               ) : tryOnMode === 'photo' && !uploadedPhoto ? (
