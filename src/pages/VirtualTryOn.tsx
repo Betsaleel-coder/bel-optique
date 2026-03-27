@@ -358,9 +358,9 @@ export default function VirtualTryOn() {
           <div className="flex flex-col xl:flex-row gap-4 justify-center items-center w-full max-w-7xl mx-auto px-4">
             <div className="w-full max-w-5xl h-[50vh] sm:h-auto sm:max-h-[80vh] bg-black rounded-3xl overflow-hidden aspect-[3/4] sm:aspect-video relative shadow-2xl border border-white/10">
               {!isCameraActive && tryOnMode !== 'photo' ? (
-                <div className="absolute inset-0 flex flex-col items-center justify-center p-4 sm:p-8 text-center bg-bel-dark/80">
-                  <h3 className="font-serif text-2xl sm:text-3xl font-medium mb-8 text-white">{t('vto.title') || "Choisissez votre mode d'essai"}</h3>
-                  <div className="flex flex-col sm:flex-row gap-6">
+                <div className="absolute inset-0 flex flex-col items-center justify-center p-4 sm:p-8 text-center bg-bel-dark/80 overflow-y-auto hide-scrollbar">
+                  <h3 className="font-serif text-2xl sm:text-3xl font-medium mb-4 sm:mb-8 text-white mt-auto">{t('vto.title') || "Choisissez votre mode d'essai"}</h3>
+                  <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 mb-auto">
                     {/* Mode Photo */}
                     <div
                       className="bg-white/5 p-4 sm:p-6 rounded-3xl border border-white/10 flex flex-col items-center hover:bg-white/10 transition-colors w-full sm:w-64 group cursor-pointer"
