@@ -406,8 +406,8 @@ export default function VirtualTryOn() {
                   <button onClick={() => setTryOnMode(null)} className="mt-6 text-white/50 hover:text-white underline">Retour</button>
                 </div>
               ) : tryOnMode === 'photo' && uploadedPhoto ? (
-                <div className="absolute inset-0 bg-zinc-900 flex items-center justify-center overflow-hidden">
-                  <img src={uploadedPhoto} className="absolute inset-0 w-full h-full object-cover scale-x-[-1]" alt="Uploaded face" />
+                <div className="absolute inset-0 bg-black flex items-center justify-center overflow-hidden">
+                  <img src={uploadedPhoto} className="absolute inset-0 w-full h-full object-contain scale-x-[-1]" alt="Uploaded face" />
 
                   {isPhotoProcessing && (
                     <div className="absolute inset-0 flex items-center justify-center bg-black/40 z-20">
@@ -443,13 +443,15 @@ export default function VirtualTryOn() {
                   </div>
                 </div>
               ) : (
-                <div className="absolute inset-0 bg-zinc-900 flex items-center justify-center">
+                <div className="absolute inset-0 bg-black flex items-center justify-center">
                   {/* Real-time Video Feed */}
                   <video
                     ref={videoRef}
-                    className="absolute inset-0 w-full h-full object-cover scale-x-[-1]"
+                    className="absolute inset-0 w-full h-full object-contain scale-x-[-1]"
                     style={{ filter: 'none' }}
                     playsInline
+                    autoPlay
+                    muted
                   />
 
                   {/* 3D AR Overlay */}
@@ -460,6 +462,7 @@ export default function VirtualTryOn() {
                       imageUrl={selectedGlasses?.tryOnImage || selectedGlasses?.image}
                       productId={selectedGlasses?.id}
                       productName={selectedGlasses?.name}
+                      objectFit="contain"
                     />
                   )}
 
