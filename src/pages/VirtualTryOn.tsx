@@ -3,7 +3,7 @@ import { Camera, X, RefreshCw, CheckCircle, Sparkles, Ruler, Info, Share2, Messa
 import { useLanguage } from '../contexts/LanguageContext';
 import { supabase } from '../lib/supabase';
 import ARScene from '../components/VTO/ARScene';
-// Removing direct imports of MediaPipe as they move to the Worker
+// Stable face-api.js integration (CPU-only for maximum compatibility)
 
 export default function VirtualTryOn() {
   const [isCameraActive, setIsCameraActive] = useState(false);
@@ -22,13 +22,10 @@ export default function VirtualTryOn() {
   const [showPdInfo, setShowPdInfo] = useState(false);
   const [isFlashActive, setIsFlashActive] = useState(false);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
-  const [performanceMode, setPerformanceMode] = useState<'high' | 'eco'>('high');
   const videoRef = useRef<HTMLVideoElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
-  const selectedGlassesRef = useRef<any>(null); // Ref to avoid stale closures
-  const landmarksRef = useRef<any>(null); // New Ref for high-performance data flow
-  const workerRef = useRef<Worker | null>(null);
-  const [isWorkerReady, setIsWorkerReady] = useState(false);
+  const landmarksRef = useRef<any>(null);
+  const animFrameRef = useRef<number>(0);
   const isMeasuringRef = useRef(false);
   const calibrationScaleRef = useRef<number | null>(null);
   const pdHistoryRef = useRef<number[]>([]);
@@ -36,132 +33,164 @@ export default function VirtualTryOn() {
 
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
+  // ── Chargement des modèles face-api.js (CPU, pas de WebGL) ───────────────
   useEffect(() => {
-    selectedGlassesRef.current = selectedGlasses;
-    isMeasuringRef.current = isMeasuring;
-    calibrationScaleRef.current = calibrationScale;
-  }, [selectedGlasses, isMeasuring, calibrationScale]);
-
-  useEffect(() => {
-    fetchGlasses();
+    const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.14/model';
+    const faceapi = (window as any).faceapi;
+    if (!faceapi) {
+      // Réessayer quand face-api.js est chargé
+      const interval = setInterval(() => {
+        const fa = (window as any).faceapi;
+        if (fa) {
+          clearInterval(interval);
+          loadModels(fa, MODEL_URL);
+        }
+      }, 300);
+      return () => clearInterval(interval);
+    }
+    loadModels(faceapi, MODEL_URL);
   }, []);
 
+  async function loadModels(faceapi: any, modelUrl: string) {
+    try {
+      // Forcer le backend CPU pour éviter toute dépendance à WebGL
+      if (faceapi.tf) {
+        await faceapi.tf.setBackend('cpu');
+        await faceapi.tf.ready();
+      }
+      await Promise.all([
+        faceapi.nets.tinyFaceDetector.loadFromUri(modelUrl),
+        faceapi.nets.faceLandmark68Net.loadFromUri(modelUrl),
+      ]);
+      console.log('face-api.js models loaded (CPU backend)');
+    } catch (e) {
+      console.error('face-api model load error:', e);
+    }
+  }
+
+  // ── Tracking Vidéo (face-api.js, CPU) ────────────────────────────────────
   useEffect(() => {
-    if (!isCameraActive && tryOnMode !== 'photo') {
-      workerRef.current?.terminate();
-      workerRef.current = null;
-      setIsWorkerReady(false);
+    if (!isCameraActive) {
+      cancelAnimationFrame(animFrameRef.current);
+      if (videoRef.current?.srcObject) {
+        (videoRef.current.srcObject as MediaStream).getTracks().forEach(t => t.stop());
+      }
+      landmarksRef.current = null;
+      setLandmarks(null);
       return;
     }
 
-    const worker = new Worker(new URL('../workers/vtoWorker.ts', import.meta.url)); // Reverted to classic worker
-    workerRef.current = worker;
+    let active = true;
 
-    worker.onmessage = (event) => {
-      const { type, landmarks: detectedLandmarks } = event.data;
-      if (type === 'READY') {
-        setIsWorkerReady(true);
-      } else if (type === 'RESULTS') {
-        landmarksRef.current = detectedLandmarks;
-        if (!landmarks) setLandmarks(detectedLandmarks);
-        handlePdUpdate(detectedLandmarks);
+    const startCamera = async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' }
+        });
+        if (!videoRef.current || !active) return;
+        videoRef.current.srcObject = stream;
+        await new Promise<void>(resolve => {
+          videoRef.current!.onloadedmetadata = () => resolve();
+        });
+        await videoRef.current.play();
+        processLoop();
+      } catch (err) {
+        console.error('Camera error:', err);
       }
     };
 
-    worker.postMessage({
-      type: 'INIT',
-      data: { cdnPath: 'https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619' }
-    });
+    const processLoop = async () => {
+      const faceapi = (window as any).faceapi;
+      if (!faceapi || !videoRef.current || !active) {
+        animFrameRef.current = requestAnimationFrame(processLoop);
+        return;
+      }
 
-    let frameId: number;
-    if (isCameraActive) {
-      const processFrame = async () => {
-        if (videoRef.current && videoRef.current.readyState >= 2) {
-          try {
-            if (performanceMode === 'eco' && frameId % 2 === 0) {
-              frameId = requestAnimationFrame(processFrame);
-              return;
-            }
+      try {
+        const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.3 });
+        const result = await faceapi
+          .detectSingleFace(videoRef.current, options)
+          .withFaceLandmarks();
 
-            const imageBitmap = await createImageBitmap(videoRef.current);
-            worker.postMessage({
-              type: 'PROCESS',
-              data: { image: imageBitmap }
-            }, [imageBitmap]);
-          } catch (e) { }
+        if (result && active) {
+          const pts = result.landmarks.positions;
+          const vw = videoRef.current?.videoWidth || 640;
+          const vh = videoRef.current?.videoHeight || 480;
+
+          // Construire un tableau de 68 points normalisés
+          const lm = pts.map((p: any) => ({ x: p.x / vw, y: p.y / vh, z: 0 }));
+
+          landmarksRef.current = lm;
+          setLandmarks(lm);
+          handlePdUpdate(lm);
+        } else if (active) {
+          landmarksRef.current = null;
         }
-        frameId = requestAnimationFrame(processFrame);
-      };
+      } catch (_) {}
 
-      const startCamera = async () => {
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({
-            video: {
-              width: { ideal: performanceMode === 'high' ? 1920 : 1280 },
-              height: { ideal: performanceMode === 'high' ? 1080 : 720 },
-              facingMode: 'user'
-            }
-          });
-          if (videoRef.current) {
-            videoRef.current.srcObject = stream;
-            videoRef.current.onloadedmetadata = () => {
-              videoRef.current?.play();
-              processFrame();
-            };
-          }
-        } catch (err) { }
-      };
+      if (active) {
+        animFrameRef.current = requestAnimationFrame(processLoop);
+      }
+    };
 
-      startCamera();
-    }
+    startCamera();
 
     return () => {
-      if (frameId) cancelAnimationFrame(frameId);
-      worker.terminate();
+      active = false;
+      cancelAnimationFrame(animFrameRef.current);
       if (videoRef.current?.srcObject) {
         (videoRef.current.srcObject as MediaStream).getTracks().forEach(t => t.stop());
       }
     };
-  }, [isCameraActive, tryOnMode, isWorkerReady, performanceMode]);
+  }, [isCameraActive]);
 
+  // ── Mode Photo (face-api.js) ───────────────────────────────────────────
   useEffect(() => {
-    if (tryOnMode === 'photo' && uploadedPhoto && isWorkerReady && workerRef.current) {
-      setIsPhotoProcessing(true);
-      setLandmarks(null);
-      landmarksRef.current = null;
+    if (tryOnMode !== 'photo' || !uploadedPhoto) return;
+    const faceapi = (window as any).faceapi;
+    if (!faceapi) return;
 
-      const img = new Image();
-      img.onload = async () => {
-        try {
-          const imageBitmap = await createImageBitmap(img);
-          workerRef.current?.postMessage({
-            type: 'PROCESS',
-            data: { image: imageBitmap }
-          }, [imageBitmap]);
-        } catch (e) {
-          console.error(e);
+    setIsPhotoProcessing(true);
+    setLandmarks(null);
+    landmarksRef.current = null;
+
+    const img = new Image();
+    img.onload = async () => {
+      try {
+        const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.3 });
+        const result = await faceapi.detectSingleFace(img, options).withFaceLandmarks();
+        if (result) {
+          const pts = result.landmarks.positions;
+          const vw = img.width;
+          const vh = img.height;
+          const lm = pts.map((p: any) => ({ x: p.x / vw, y: p.y / vh, z: 0 }));
+
+          landmarksRef.current = lm;
+          setLandmarks(lm);
         }
-        setIsPhotoProcessing(false);
-      };
-      img.src = uploadedPhoto;
-    }
-  }, [uploadedPhoto, isWorkerReady, tryOnMode]);
+      } catch (e) {
+        console.error("Photo process error", e);
+      }
+      setIsPhotoProcessing(false);
+    };
+    img.src = uploadedPhoto;
+  }, [uploadedPhoto, tryOnMode]);
 
   const handlePdUpdate = (face: any) => {
     let currentPd = 0;
 
-    if (calibrationScaleRef.current && face[468] && face[473]) {
-      const leftIris = face[468];
-      const rightIris = face[473];
+    if (calibrationScaleRef.current && face[33] && face[263]) {
+      const p1 = face[33];
+      const p2 = face[263];
       const normalizedDistance = Math.sqrt(
-        Math.pow(rightIris.x - leftIris.x, 2) + Math.pow(rightIris.y - leftIris.y, 2)
+        Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2)
       );
       currentPd = Math.round(normalizedDistance * calibrationScaleRef.current);
-    } else if (isMeasuringRef.current && !calibrationScaleRef.current) {
+    } else if (isMeasuringRef.current && !calibrationScaleRef.current && face[33] && face[263]) {
       const p1 = face[33];
       const p2 = face[263];
       const distanceInPixels = Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
-      currentPd = Math.round(distanceInPixels * 380);
+      currentPd = Math.round(distanceInPixels * 380); // Estimate based on screen density
     }
 
     if (currentPd > 30 && currentPd < 100) {
@@ -304,7 +333,7 @@ export default function VirtualTryOn() {
         <div className="flex flex-col gap-8">
           {/* Main Viewer Area */}
           <div className="flex flex-col xl:flex-row gap-4 justify-center items-center w-full max-w-7xl mx-auto">
-            <div className="w-full max-w-5xl bg-black rounded-3xl overflow-hidden aspect-[4/3] sm:aspect-video relative shadow-2xl border border-white/10">
+            <div className="w-full max-w-5xl max-h-[80vh] bg-black rounded-3xl overflow-hidden aspect-[4/3] sm:aspect-video relative shadow-2xl border border-white/10">
               {!isCameraActive && tryOnMode !== 'photo' ? (
                 <div className="absolute inset-0 flex flex-col items-center justify-center p-4 sm:p-8 text-center bg-bel-dark/80">
                   <h3 className="font-serif text-2xl sm:text-3xl font-medium mb-8 text-white">{t('vto.title') || "Choisissez votre mode d'essai"}</h3>
@@ -425,19 +454,6 @@ export default function VirtualTryOn() {
 
                   {/* Overlay UI */}
                   <div className="absolute top-4 right-4 flex gap-2">
-                    <button
-                      onClick={() => setPerformanceMode(prev => prev === 'high' ? 'eco' : 'high')}
-                      className={`h-10 px-4 rounded-full flex items-center gap-2 transition-all border ${performanceMode === 'high'
-                        ? 'bg-bel-accent/20 border-bel-accent text-bel-accent'
-                        : 'bg-black/50 border-white/20 text-white/50'
-                        }`}
-                      title={t('vto.performance')}
-                    >
-                      <RefreshCw size={16} className={performanceMode === 'high' ? 'animate-spin-slow' : ''} />
-                      <span className="text-[10px] font-bold uppercase tracking-wider">
-                        {performanceMode === 'high' ? t('vto.high_fidelity') : t('vto.battery_saver')}
-                      </span>
-                    </button>
                     <button
                       onClick={() => setIsCameraActive(false)}
                       className="w-10 h-10 bg-black/50 border border-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-colors"
