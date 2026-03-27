@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from 'react';
 import { Camera, X, RefreshCw, CheckCircle, Sparkles, Ruler, Info, Share2, MessageCircle, Image as ImageIcon, Video } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { supabase } from '../lib/supabase';
-import vtoBackground from '../assets/vto-background.png';
 import ARScene from '../components/VTO/ARScene';
 // Stable face-api.js integration (CPU-only for maximum compatibility)
 
@@ -357,10 +356,7 @@ export default function VirtualTryOn() {
         <div className="flex flex-col gap-8">
           {/* Main Viewer Area */}
           <div className="flex flex-col xl:flex-row gap-4 justify-center items-center w-full max-w-7xl mx-auto">
-            <div className="w-full max-w-5xl max-h-[80vh] bg-zinc-900 rounded-3xl overflow-hidden aspect-[4/3] sm:aspect-video relative shadow-2xl border border-white/10">
-              {/* Background Image layer */}
-              <img src={vtoBackground} className="absolute inset-0 w-full h-full object-cover opacity-60 z-0" alt="" />
-              
+            <div className="w-full max-w-5xl max-h-[80vh] bg-black rounded-3xl overflow-hidden aspect-[4/3] sm:aspect-video relative shadow-2xl border border-white/10">
               {!isCameraActive && tryOnMode !== 'photo' ? (
                 <div className="absolute inset-0 flex flex-col items-center justify-center p-4 sm:p-8 text-center bg-bel-dark/80">
                   <h3 className="font-serif text-2xl sm:text-3xl font-medium mb-8 text-white">{t('vto.title') || "Choisissez votre mode d'essai"}</h3>
@@ -398,11 +394,11 @@ export default function VirtualTryOn() {
                 </div>
               ) : tryOnMode === 'photo' && !uploadedPhoto ? (
                 <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center bg-bel-dark/80">
-                  <h3 className="font-serif text-2xl sm:text-3xl font-medium mb-4 text-white">Uploadez votre photo</h3>
+                  <h3 className="font-serif text-2xl sm:text-3xl font-medium mb-4 text-white">{t('vto.upload_title')}</h3>
                   <p className="text-bel-light/70 mb-8 max-w-md">Assurez-vous que votre visage est bien éclairé et bien de face.</p>
                   <label className="cursor-pointer bg-bel-accent text-bel-dark px-8 py-4 rounded-full font-bold shadow-xl shadow-bel-accent/20 hover:scale-105 transition-all flex items-center gap-3">
                     <ImageIcon size={24} />
-                    Sélectionner une image
+                    {t('vto.select_image')}
                     <input type="file" accept="image/*" className="hidden" onChange={(e) => {
                       if (e.target.files && e.target.files[0]) {
                         const url = URL.createObjectURL(e.target.files[0]);
@@ -413,7 +409,7 @@ export default function VirtualTryOn() {
                   <button onClick={() => setTryOnMode(null)} className="mt-6 text-white/50 hover:text-white underline">Retour</button>
                 </div>
               ) : tryOnMode === 'photo' && uploadedPhoto ? (
-                <div className="absolute inset-0 flex items-center justify-center overflow-hidden">
+                <div className="absolute inset-0 bg-black flex items-center justify-center overflow-hidden">
                   <img src={uploadedPhoto} className="absolute inset-0 w-full h-full object-contain scale-x-[-1] z-10" alt="Uploaded face" />
 
                   {isPhotoProcessing && (
@@ -452,7 +448,7 @@ export default function VirtualTryOn() {
                   </div>
                 </div>
               ) : (
-                <div className="absolute inset-0 flex items-center justify-center">
+                <div className="absolute inset-0 bg-black flex items-center justify-center">
                   {/* Real-time Video Feed */}
                   <video
                     ref={videoRef}
