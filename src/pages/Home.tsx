@@ -9,6 +9,7 @@ import BrandShowcase from '../components/BrandShowcase';
 import Testimonials from '../components/Testimonials';
 import artLensLogo from '../assets/logo-france-clair-1 (1).webp';
 import WhatsAppIcon from '../components/WhatsAppIcon';
+import heroBackground from '../assets/vto-background.png';
 
 export default function Home() {
   const { t } = useLanguage();
@@ -60,10 +61,9 @@ export default function Home() {
       <section className="relative h-[90vh] flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0 z-0">
           <img
-            src="https://images.unsplash.com/photo-1511499767150-a48a237f0083?q=80&w=2000&auto=format&fit=crop"
+            src={heroBackground}
             alt="Person wearing stylish glasses"
             className="w-full h-full object-cover"
-            referrerPolicy="no-referrer"
           />
           <div className="absolute inset-0 bg-bel-dark/40"></div>
         </div>
