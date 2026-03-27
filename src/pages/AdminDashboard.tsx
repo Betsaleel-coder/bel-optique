@@ -36,12 +36,14 @@ export default function AdminDashboard() {
         gender: 'Unisex',
         price: 0,
         image_url: '',
+        model_3d_url: '',
         is_new: false,
         is_promotion: false,
         is_featured: false,
         description: '',
     });
     const [imageFile, setImageFile] = useState<File | null>(null);
+    const [tryOnImageFile, setTryOnImageFile] = useState<File | null>(null);
     const [uploading, setUploading] = useState(false);
 
     // Appointments state
@@ -196,6 +198,7 @@ export default function AdminDashboard() {
                 gender: product.gender || 'Unisex',
                 price: product.price || 0,
                 image_url: product.image_url || '',
+                model_3d_url: product.model_3d_url || '',
                 is_new: product.is_new || false,
                 is_promotion: product.is_promotion || false,
                 is_featured: product.is_featured || false,
@@ -210,6 +213,7 @@ export default function AdminDashboard() {
                 gender: 'Unisex',
                 price: 0,
                 image_url: '',
+                model_3d_url: '',
                 is_new: false,
                 is_promotion: false,
                 is_featured: false,
@@ -217,6 +221,7 @@ export default function AdminDashboard() {
             });
         }
         setImageFile(null);
+        setTryOnImageFile(null);
         setIsModalOpen(true);
     };
 
@@ -230,6 +235,7 @@ export default function AdminDashboard() {
         setLoading(true);
         try {
             let finalImageUrl = formData.image_url;
+            let finalTryOnImageUrl = formData.model_3d_url;
 
             // Upload image if a new file is selected
             if (imageFile) {
@@ -252,7 +258,28 @@ export default function AdminDashboard() {
                 setUploading(false);
             }
 
-            const submissionData = { ...formData, image_url: finalImageUrl };
+            // Upload Try-On PNG
+            if (tryOnImageFile) {
+                setUploading(true);
+                const fileExt = tryOnImageFile.name.split('.').pop();
+                const fileName = `tryon_${Math.random()}.${fileExt}`;
+                const filePath = `products/${fileName}`;
+
+                const { error: uploadError } = await supabase.storage
+                    .from('products')
+                    .upload(filePath, tryOnImageFile);
+
+                if (uploadError) throw uploadError;
+
+                const { data: { publicUrl } } = supabase.storage
+                    .from('products')
+                    .getPublicUrl(filePath);
+                
+                finalTryOnImageUrl = publicUrl;
+                setUploading(false);
+            }
+
+            const submissionData = { ...formData, image_url: finalImageUrl, model_3d_url: finalTryOnImageUrl };
 
             if (editingId) {
                 const { error } = await supabase.from('products').update(submissionData).eq('id', editingId);
@@ -717,33 +744,81 @@ export default function AdminDashboard() {
                                     </div>
                                 </div>
 
-                                <div>
-                                    <label className="block text-sm font-medium text-bel-dark/70 mb-2">Image URL</label>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="p-4 border border-gray-100 rounded-xl bg-white mb-4 shadow-sm">
+                                    <label className="block text-base font-bold text-bel-dark mb-1">1. Photo de Présentation (Catalogue)</label>
+                                    <p className="text-xs text-bel-dark/60 mb-4">Cette photo sera affichée dans la boutique et sur les miniatures.</p>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         <div>
-                                            <label className="block text-xs font-bold text-bel-dark/60 uppercase tracking-widest mb-2">Image (URL)</label>
-                                            <input
-                                                type="url"
-                                                value={formData.image_url}
-                                                onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-                                                className="w-full px-4 py-3 bg-bel-gray/30 border border-gray-100 rounded-xl focus:ring-2 focus:ring-bel-accent outline-none text-sm"
-                                                placeholder="https://..."
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-bold text-bel-dark/60 uppercase tracking-widest mb-2">Ou Upload Local</label>
+                                            <label className="block text-xs font-bold text-bel-dark/80 uppercase tracking-widest mb-2 text-bel-accent">Télécharger (Recommandé)</label>
                                             <input
                                                 type="file"
                                                 accept="image/*"
                                                 onChange={(e) => setImageFile(e.target.files ? e.target.files[0] : null)}
-                                                className="w-full px-4 py-2.5 bg-bel-gray/30 border border-gray-100 rounded-xl focus:ring-2 focus:ring-bel-accent outline-none text-xs"
+                                                className="w-full px-4 py-3 bg-bel-gray/30 border border-gray-200 rounded-xl focus:ring-2 focus:ring-bel-accent outline-none text-sm cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-bel-accent/10 file:text-bel-accent hover:file:bg-bel-accent/20"
                                             />
-                                            {uploading && <p className="text-[10px] text-bel-accent mt-1 animate-pulse">Chargement de l'image...</p>}
+                                            {uploading && <p className="text-[10px] text-bel-accent mt-2 animate-pulse font-medium">Chargement en cours...</p>}
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-bold text-bel-dark/40 uppercase tracking-widest mb-2">Ou utiliser une URL</label>
+                                            <input
+                                                type="url"
+                                                value={formData.image_url}
+                                                onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
+                                                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-bel-accent outline-none text-sm"
+                                                placeholder="https://..."
+                                            />
                                         </div>
                                     </div>
                                     {formData.image_url && (
-                                        <div className="mt-3 w-24 h-24 rounded-xl border border-gray-200 overflow-hidden bg-bel-gray">
+                                        <div className="mt-4 w-32 h-32 rounded-xl border border-gray-200 overflow-hidden bg-bel-gray relative group">
                                             <img src={formData.image_url} alt="Aperçu" className="w-full h-full object-cover mix-blend-multiply" />
+                                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <span className="text-white text-xs font-medium">Aperçu Catalogue</span>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="p-4 bg-bel-accent/5 border-2 border-bel-accent/30 rounded-xl shadow-sm">
+                                    <label className="block text-base font-bold text-bel-dark mb-1 flex items-center gap-2">
+                                        <Eye size={18} className="text-bel-accent" />
+                                        2. Photo d'Essayage Virtuel
+                                    </label>
+                                    <p className="text-xs text-bel-dark/80 font-medium mb-4 bg-bel-accent/10 p-2 rounded-lg inline-block">
+                                        ⚠️ OBLIGATOIRE : Cette image DOIT être un PNG transparent (sans arrière-plan) affichant la lunette parfaitement de face.
+                                    </p>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div>
+                                            <label className="block text-xs font-bold text-bel-dark/80 uppercase tracking-widest mb-2 text-bel-accent">Télécharger le PNG (Recommandé)</label>
+                                            <input
+                                                type="file"
+                                                accept="image/png"
+                                                onChange={(e) => setTryOnImageFile(e.target.files ? e.target.files[0] : null)}
+                                                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-bel-accent outline-none text-sm cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-bel-accent/10 file:text-bel-accent hover:file:bg-bel-accent/20"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-bold text-bel-dark/40 uppercase tracking-widest mb-2">Ou utiliser une URL</label>
+                                            <input
+                                                type="url"
+                                                value={formData.model_3d_url}
+                                                onChange={(e) => setFormData({ ...formData, model_3d_url: e.target.value })}
+                                                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-bel-accent outline-none text-sm"
+                                                placeholder="URL de l'image (optionnel)"
+                                            />
+                                        </div>
+                                        <div>
+                                            <input
+                                                type="file"
+                                                accept="image/png"
+                                                onChange={(e) => setTryOnImageFile(e.target.files ? e.target.files[0] : null)}
+                                                className="w-full px-4 py-2 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-bel-accent outline-none text-xs"
+                                            />
+                                        </div>
+                                    </div>
+                                    {formData.model_3d_url && (
+                                        <div className="mt-3 w-32 h-20 rounded-xl border border-gray-200 overflow-hidden bg-white flex items-center justify-center p-2">
+                                            <img src={formData.model_3d_url} alt="Aperçu PNG" className="max-w-full max-h-full object-contain drop-shadow-md" />
                                         </div>
                                     )}
                                 </div>

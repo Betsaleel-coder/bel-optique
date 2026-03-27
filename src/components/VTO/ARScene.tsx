@@ -1,244 +1,224 @@
-import React, { useRef, useState, useEffect } from 'react';
-import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { useGLTF, PerspectiveCamera, Environment } from '@react-three/drei';
-import * as THREE from 'three';
-import FaceOccluder from './FaceOccluder';
-// @ts-ignore - Importing WebGPU renderer from three
-import WebGPURenderer from 'three/src/renderers/webgpu/WebGPURenderer.js';
+import React, { useRef, useEffect, useState } from 'react';
 
 interface ARSceneProps {
     landmarksRef: React.MutableRefObject<any>;
     videoElement: HTMLVideoElement | null;
-    modelUrl?: string;
+    sourceWidth?: number;
+    sourceHeight?: number;
+    imageUrl?: string;
     productId?: string;
     productName?: string;
-    performanceMode?: 'high' | 'eco';
+    objectFit?: 'cover' | 'contain';
 }
 
-function GlassesModel({ landmarksRef, modelUrl, productId, productName }: { landmarksRef: React.MutableRefObject<any>; modelUrl?: string; productId?: string; productName?: string }) {
-    const meshRef = useRef<THREE.Group>(null);
-    const gltf = modelUrl ? useGLTF(modelUrl, 'https://www.gstatic.com/draco/versioned/decoders/1.5.6/') : null;
-
-    // Choose a color based on the product name for visual feedback
-    const frameColor = productName?.toLowerCase().includes('gold') ? '#d4af37' :
-        productName?.toLowerCase().includes('chic') ? '#800000' :
-            productName?.toLowerCase().includes('black') ? '#000000' : '#222222';
-
-    const isAviator = productName?.toLowerCase().includes('aviator');
+// ─────────────────────────────────────────────────────────────────────────────
+// ARScene – rendu Canvas 2D (pas de WebGL requis)
+// ─────────────────────────────────────────────────────────────────────────────
+export default function ARScene({ landmarksRef, videoElement, sourceWidth, sourceHeight, imageUrl, objectFit = 'cover' }: ARSceneProps) {
+    const canvasRef = useRef<HTMLCanvasElement>(null);
+    const animRef = useRef<number>(0);
+    const [glassesImage, setGlassesImage] = useState<HTMLImageElement | null>(null);
 
     useEffect(() => {
-        if (gltf) {
-            gltf.scene.traverse((child) => {
-                const mesh = child as THREE.Mesh;
-                if (mesh.isMesh) {
-                    mesh.renderOrder = 1;
-                }
-            });
-        }
-    }, [gltf]);
-
-    // Internal state for smoothed values
-    const smoothPos = useRef(new THREE.Vector3());
-    const smoothRot = useRef(new THREE.Euler());
-    const smoothScale = useRef(new THREE.Vector3(1, 1, 1));
-
-    useFrame((state) => {
-        const landmarks = landmarksRef.current;
-        if (!meshRef.current) return;
-
-        if (!landmarks) {
-            meshRef.current.visible = false;
+        if (!imageUrl) {
+            setGlassesImage(null);
             return;
         }
-        meshRef.current.visible = true;
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+                ctx.drawImage(img, 0, 0);
+                try {
+                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    const data = imageData.data;
+                    
+                    let minX = canvas.width;
+                    let minY = canvas.height;
+                    let maxX = 0;
+                    let maxY = 0;
 
-        // Key landmarks for alignment
-        const noseBridge = landmarks[168];
-        const leftInnerEye = landmarks[33];
-        const rightInnerEye = landmarks[263];
-        const leftTemple = landmarks[127];
-        const rightTemple = landmarks[356];
+                    for (let i = 0; i < data.length; i += 4) {
+                        const luma = (data[i] * 2 + data[i+1] * 3 + data[i+2]) / 6;
+                        const px = (i / 4) % canvas.width;
+                        const py = Math.floor((i / 4) / canvas.width);
+                        
+                        if (luma > 245) {
+                            data[i+3] = 0;
+                        } else {
+                            if (luma > 220) {
+                                data[i+3] = Math.floor(((245 - luma) / 25) * 255);
+                            }
+                            
+                            // Track bounding box based on fully opaque pixels
+                            // This natively ignores soft shadows, anti-aliased edges, and floor reflections
+                            if (data[i+3] > 200) {
+                                if (px < minX) minX = px;
+                                if (px > maxX) maxX = px;
+                                if (py < minY) minY = py;
+                                if (py > maxY) maxY = py;
+                            }
+                        }
+                    }
+                    ctx.putImageData(imageData, 0, 0);
 
-        if (noseBridge && leftInnerEye && rightInnerEye) {
-            // 1. Precise Positioning based on FOV
-            // At distance 5 with FOV 40, visible width is ~3.6 units
-            const viewportWidth = 3.65;
-            const viewportHeight = viewportWidth / (state.viewport.aspect || 1.77);
+                    // If bounds found, create tight crop for perfect AR scaling
+                    if (maxX > minX && maxY > minY) {
+                        const pad = 10;
+                        minX = Math.max(0, minX - pad);
+                        maxX = Math.min(canvas.width, maxX + pad);
+                        minY = Math.max(0, minY - pad);
+                        maxY = Math.min(canvas.height, maxY + pad);
 
-            const targetX = (noseBridge.x - 0.5) * -viewportWidth;
-            const targetY = (noseBridge.y - 0.5) * -viewportHeight;
+                        const cropW = maxX - minX;
+                        const cropH = maxY - minY;
 
-            // depth estimation using eye distance (more stable than z-landmark)
-            const eyeDist = Math.abs(rightInnerEye.x - leftInnerEye.x);
-            const targetZ = -2 + (eyeDist * 5); // Simple linear mapping for depth
+                        const croppedCanvas = document.createElement('canvas');
+                        croppedCanvas.width = cropW;
+                        croppedCanvas.height = cropH;
+                        const croppedCtx = croppedCanvas.getContext('2d');
+                        if (croppedCtx) {
+                            croppedCtx.drawImage(canvas, minX, minY, cropW, cropH, 0, 0, cropW, cropH);
+                            const processedImg = new Image();
+                            processedImg.onload = () => setGlassesImage(processedImg);
+                            processedImg.src = croppedCanvas.toDataURL('image/png');
+                            return;
+                        }
+                    }
 
-            smoothPos.current.lerp(new THREE.Vector3(targetX, targetY - 0.1, targetZ), 0.2);
-            meshRef.current.position.copy(smoothPos.current);
+                    // Fallback to full processed canvas if no bounds could be calculated
+                    const processedImg = new Image();
+                    processedImg.onload = () => setGlassesImage(processedImg);
+                    processedImg.src = canvas.toDataURL('image/png');
+                } catch (e) {
+                    setGlassesImage(img);
+                }
+            } else {
+                setGlassesImage(img);
+            }
+        };
+        img.onerror = () => {
+            const fallbackImg = new Image();
+            fallbackImg.onload = () => setGlassesImage(fallbackImg);
+            fallbackImg.src = imageUrl;
+        };
+        img.src = imageUrl;
+    }, [imageUrl]);
 
-            // 2. Rotation (Roll, Pitch, Yaw)
-            const targetRot = new THREE.Euler();
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
 
-            // Roll (Z) - precise eye-line angle
-            const dx = rightInnerEye.x - leftInnerEye.x;
-            const dy = rightInnerEye.y - leftInnerEye.y;
-            targetRot.z = -Math.atan2(dy, dx);
+        const render = () => {
+            const w = canvas.offsetWidth;
+            const h = canvas.offsetHeight;
 
-            // Pitch (X) - Head tilt forward/backward
-            // Using ratio of nose position to eye line for more stability
-            const eyeCenterY = (leftInnerEye.y + rightInnerEye.y) / 2;
-            const noseTip = landmarks[1];
-            if (noseTip) {
-                targetRot.x = (noseTip.y - eyeCenterY) * 1.5;
+            // Determine actual source bounds
+            const sw = sourceWidth || (videoElement ? videoElement.videoWidth : 0);
+            const sh = sourceHeight || (videoElement ? videoElement.videoHeight : 0);
+
+            // Resize canvas if needed
+            if (canvas.width !== w || canvas.height !== h) {
+                canvas.width = w;
+                canvas.height = h;
             }
 
-            // Yaw (Y) - Head turn left/right
-            const noseBridgeZ = landmarks[168].z;
-            const earsDist = Math.abs(landmarks[234].z - landmarks[454].z);
-            targetRot.y = (landmarks[234].z - landmarks[454].z) * 12;
+            ctx.clearRect(0, 0, w, h);
 
-            // Smoothing rotation
-            meshRef.current.rotation.x = THREE.MathUtils.lerp(meshRef.current.rotation.x, targetRot.x, 0.2);
-            meshRef.current.rotation.y = THREE.MathUtils.lerp(meshRef.current.rotation.y, targetRot.y, 0.2);
-            meshRef.current.rotation.z = THREE.MathUtils.lerp(meshRef.current.rotation.z, targetRot.z, 0.2);
+            // Calculate object-fit: cover sizing based on source dimensions
+            if (sw > 0 && sh > 0) {
+                const sourceRatio = sw / sh;
+                const canvasRatio = w / h;
+                
+                let renderWidth = w;
+                let renderHeight = h;
+                let offsetX = 0;
+                let offsetY = 0;
 
-            // 3. Precise Morphological Scaling
-            // Landmark 127 to 356 (temple to temple)
-            const templeWidth = Math.sqrt(Math.pow(rightTemple.x - leftTemple.x, 2) + Math.pow(rightTemple.y - leftTemple.y, 2));
+                if ((objectFit === 'cover' && canvasRatio > sourceRatio) || (objectFit === 'contain' && canvasRatio <= sourceRatio)) {
+                    renderWidth = w;
+                    renderHeight = w / sourceRatio;
+                    offsetX = 0;
+                    offsetY = (h - renderHeight) / 2;
+                } else {
+                    renderHeight = h;
+                    renderWidth = h * sourceRatio;
+                    offsetX = (w - renderWidth) / 2;
+                    offsetY = 0;
+                }
 
-            // Standard glasses width is ~140mm (0.14 in normalized units)
-            // We use a multiplier to map face width to 3D units accurately
-            const scaleFactor = templeWidth * 9.5;
-            smoothScale.current.lerp(new THREE.Vector3(scaleFactor, scaleFactor * 0.95, scaleFactor), 0.1);
-            meshRef.current.scale.copy(smoothScale.current);
-        }
-    });
+                const lm = landmarksRef.current;
+                if (lm) {
+                    ctx.save();
+                    ctx.translate(offsetX, offsetY);
+                    
+                    // -- Draw the loaded glasses image --
+                    if (glassesImage && lm[36] && lm[45]) {
+                        const px = (p: any) => ((1 - p.x) * renderWidth);
+                        const py = (p: any) => (p.y * renderHeight);
 
-    return (
-        <group ref={meshRef}>
-            <FaceOccluder />
-            {gltf ? (
-                <primitive object={gltf.scene} />
-            ) : (
-                <group scale={[1.0, 0.9, 1.0]}>
-                    {/* Upper Frame Beam */}
-                    <mesh position={[0, 0, 0]} renderOrder={1}>
-                        <boxGeometry args={[1.0, isAviator ? 0.02 : 0.05, 0.08]} />
-                        <meshPhysicalMaterial
-                            color={frameColor}
-                            metalness={0.9}
-                            roughness={0.1}
-                            clearcoat={1.0}
-                            clearcoatRoughness={0.1}
-                        />
-                    </mesh>
+                        // Subject's right eye (indices 36-41) -> drawn on right due to mirror
+                        const eyeR_outer = lm[36];
+                        // Subject's left eye (indices 42-47) -> drawn on left
+                        const eyeL_outer = lm[45];
 
-                    {/* Bridge */}
-                    <mesh position={[0, isAviator ? -0.02 : -0.04, 0.04]} rotation={[0, 0, Math.PI]} renderOrder={1}>
-                        <torusGeometry args={[0.08, 0.015, 12, 24, Math.PI]} />
-                        <meshPhysicalMaterial
-                            color={frameColor}
-                            metalness={0.9}
-                            roughness={0.1}
-                            clearcoat={1.0}
-                        />
-                    </mesh>
+                        const rx = px(eyeR_outer);
+                        const ry = py(eyeR_outer);
+                        const lx = px(eyeL_outer);
+                        const ly = py(eyeL_outer);
 
-                    {/* Right Lens Frame */}
-                    <group position={[0.26, -0.15, 0.03]}>
-                        <mesh rotation={[Math.PI / 2, 0, 0]} renderOrder={1}>
-                            <cylinderGeometry args={[0.22, isAviator ? 0.28 : 0.22, 0.03, 32]} />
-                            <meshPhysicalMaterial color={frameColor} metalness={0.8} roughness={0.2} clearcoat={0.5} />
-                        </mesh>
-                        <mesh position={[0, 0, 0.01]} rotation={[Math.PI / 2, 0, 0]} renderOrder={1}>
-                            <cylinderGeometry args={[0.20, isAviator ? 0.26 : 0.20, 0.02, 32]} />
-                            <meshPhysicalMaterial
-                                color="#cceeff"
-                                transparent
-                                opacity={0.2}
-                                transmission={0.95}
-                                thickness={0.5}
-                                roughness={0}
-                                ior={1.5}
-                            />
-                        </mesh>
-                    </group>
+                        // Center point between the outer corners of both eyes
+                        const centerX = (lx + rx) / 2;
+                        const centerY = (ly + ry) / 2;
 
-                    {/* Left Lens Frame */}
-                    <group position={[-0.26, -0.15, 0.03]}>
-                        <mesh rotation={[Math.PI / 2, 0, 0]} renderOrder={1}>
-                            <cylinderGeometry args={[0.22, isAviator ? 0.28 : 0.22, 0.03, 32]} />
-                            <meshPhysicalMaterial color={frameColor} metalness={0.8} roughness={0.2} clearcoat={0.5} />
-                        </mesh>
-                        <mesh position={[0, 0, 0.01]} rotation={[Math.PI / 2, 0, 0]} renderOrder={1}>
-                            <cylinderGeometry args={[0.20, isAviator ? 0.26 : 0.20, 0.02, 32]} />
-                            <meshPhysicalMaterial
-                                color="#cceeff"
-                                transparent
-                                opacity={0.2}
-                                transmission={0.95}
-                                thickness={0.5}
-                                roughness={0}
-                                ior={1.5}
-                            />
-                        </mesh>
-                    </group>
+                        // Rotation angle
+                        const angle = Math.atan2(ry - ly, rx - lx);
 
-                    {/* Arms */}
-                    <mesh position={[0.48, -0.02, -0.25]} rotation={[0, 0.05, 0]} renderOrder={1}>
-                        <boxGeometry args={[0.03, 0.03, 0.5]} />
-                        <meshPhysicalMaterial color={frameColor} metalness={0.5} roughness={0.1} clearcoat={0.8} />
-                    </mesh>
-                    <mesh position={[-0.48, -0.02, -0.25]} rotation={[0, -0.05, 0]} renderOrder={1}>
-                        <boxGeometry args={[0.03, 0.03, 0.5]} />
-                        <meshPhysicalMaterial color={frameColor} metalness={0.5} roughness={0.1} clearcoat={0.8} />
-                    </mesh>
-                </group>
-            )}
-        </group>
-    );
-}
+                        // Width: distance between outer corners + some margin for the frames
+                        const dist = Math.sqrt(Math.pow(rx - lx, 2) + Math.pow(ry - ly, 2));
+                        
+                        // Human eye outer corner distance ~95mm. Standard glasses width ~142mm.
+                        // Ratio is approx 1.5x. Since the glassesImage is now tightly cropped to the frames,
+                        // targetWidth can be set exactly to 1.5 * dist!
+                        const targetWidth = dist * 1.5;
 
-export default function ARScene({ landmarksRef, videoElement, modelUrl, productId, productName, performanceMode = 'high' }: ARSceneProps) {
-    return (
-        <div className="absolute inset-0 z-10 pointer-events-none">
-            <Canvas
-                dpr={performanceMode === 'high' ? [1, 2] : [1, 1]} // Dynamic resolution
-                gl={(canvas) => {
-                    // Try WebGPU first, then fallback to WebGL
-                    try {
-                        const renderer = new WebGPURenderer({
-                            canvas,
-                            antialias: true,
-                            alpha: true,
-                            preserveDrawingBuffer: true,
-                        });
-                        return renderer;
-                    } catch (e) {
-                        console.warn('WebGPU not supported, falling back to WebGL');
-                        return new THREE.WebGLRenderer({
-                            canvas,
-                            antialias: true,
-                            alpha: true,
-                            preserveDrawingBuffer: true,
-                            powerPreference: "high-performance"
-                        });
+                        const imgRatio = glassesImage.height / glassesImage.width;
+                        const targetHeight = targetWidth * imgRatio;
+
+                        ctx.translate(centerX, centerY);
+                        ctx.rotate(angle);
+                        
+                        ctx.drawImage(
+                            glassesImage, 
+                            -targetWidth / 2, 
+                            -targetHeight * 0.50, // Vertical shift to rest the bridge on the nose 
+                            targetWidth, 
+                            targetHeight
+                        );
                     }
-                }}
-            >
-                <PerspectiveCamera makeDefault position={[0, 0, 5]} fov={40} />
-                <ambientLight intensity={0.9} />
-                <spotLight position={[5, 5, 5]} angle={0.2} intensity={1.2} />
-                <Environment preset="city" />
+                    ctx.restore();
+                }
+            }
 
-                <React.Suspense fallback={null}>
-                    <GlassesModel
-                        landmarksRef={landmarksRef}
-                        modelUrl={modelUrl}
-                        productId={productId}
-                        productName={productName}
-                    />
-                </React.Suspense>
-            </Canvas>
-        </div>
+            animRef.current = requestAnimationFrame(render);
+        };
+
+        render();
+
+        return () => cancelAnimationFrame(animRef.current);
+    }, [videoElement, landmarksRef, glassesImage]);
+
+    return (
+        <canvas
+            ref={canvasRef}
+            className="absolute inset-0 w-full h-full pointer-events-none z-10"
+            style={{ display: 'block' }}
+        />
     );
 }

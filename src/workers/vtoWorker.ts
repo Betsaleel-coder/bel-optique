@@ -10,6 +10,7 @@ let faceMesh: any = null;
 
 const initFaceMesh = async (cdnPath: string) => {
     // Use importScripts to load MediaPipe from CDN inside the worker context
+    // This requires a classic worker (type: 'classic')
     // @ts-ignore
     importScripts(`${cdnPath}/face_mesh.js`);
 
