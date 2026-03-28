@@ -177,6 +177,7 @@ export default function VirtualTryOn() {
 
     const img = new Image();
     img.onload = async () => {
+      const startTime = Date.now();
       try {
         // Use a larger input size for static photo for better precision
         const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.3 });
@@ -194,7 +195,13 @@ export default function VirtualTryOn() {
       } catch (e) {
         console.error("Photo process error", e);
       }
-      setIsPhotoProcessing(false);
+      
+      // Enforce minimum 5 second delay for better user experience
+      const elapsedTime = Date.now() - startTime;
+      const remainingTime = Math.max(0, 5000 - elapsedTime);
+      setTimeout(() => {
+        setIsPhotoProcessing(false);
+      }, remainingTime);
     };
     img.src = uploadedPhoto;
   }, [uploadedPhoto, tryOnMode]);
@@ -461,8 +468,10 @@ export default function VirtualTryOn() {
                     <img src={uploadedPhoto} className="absolute inset-0 w-full h-full object-contain scale-x-[-1] z-10" alt="Uploaded face" />
 
                     {isPhotoProcessing && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/40 z-20">
-                        <RefreshCw className="animate-spin text-bel-accent" size={32} />
+                      <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 z-20 p-6 text-center animate-in fade-in">
+                        <RefreshCw className="animate-spin text-bel-accent mb-6" size={48} />
+                        <h3 className="font-serif text-xl font-bold text-white mb-2">{t('vto.processing_photo_title')}</h3>
+                        <p className="text-bel-light/70 text-sm max-w-xs">{t('vto.processing_photo_desc')}</p>
                       </div>
                     )}
 
