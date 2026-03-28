@@ -50,7 +50,7 @@ export default function Location() {
                   <WhatsAppIcon size={24} />
                 </div>
                 <div>
-                  <h3 className="font-medium text-lg mb-2">Contact</h3>
+                  <h3 className="font-medium text-lg mb-2">{t('contact.info_contact')}</h3>
                   <p className="text-bel-dark/70 mb-1">+242 04 474 4456</p>
                   <p className="text-bel-dark/70">mailbusinessagencylearn@gmail.com</p>
                 </div>

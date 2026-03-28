@@ -30,7 +30,7 @@ export default function Navbar() {
   return (
     <nav className="sticky top-0 z-40 bg-bel-light/90 backdrop-blur-md border-b border-bel-dark/10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-24 md:h-28">
+        <div className="flex justify-between items-center h-24 md:h-28 gap-2">
           {/* Mobile menu button */}
           <div className="flex items-center md:hidden">
             <button
@@ -53,13 +53,13 @@ export default function Navbar() {
           </div>
 
           {/* Desktop Menu */}
-          <div className="hidden md:flex md:items-center md:space-x-8">
+          <div className="hidden md:flex md:items-center md:flex-wrap md:gap-x-5 md:gap-y-1 flex-1 justify-center">
             {navLinks.map((link) => (
               <Link
                 key={link.name}
                 to={link.path}
                 className={clsx(
-                  'flex items-center text-sm font-medium transition-colors hover:text-bel-accent uppercase tracking-wider',
+                  'flex items-center text-xs font-medium transition-colors hover:text-bel-accent uppercase tracking-wide whitespace-nowrap',
                   isActive(link.path) ? 'text-bel-accent' : 'text-bel-dark/80'
                 )}
               >

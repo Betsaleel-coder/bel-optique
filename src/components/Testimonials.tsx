@@ -91,7 +91,7 @@ export default function Testimonials() {
                             <div>
                                 <h4 className="font-bold text-bel-dark">{testimonial.name}</h4>
                                 <p className="text-xs text-bel-accent font-medium uppercase tracking-wider">
-                                    {testimonial.city || "Avis Client"}
+                                    {testimonial.city || t('testimonial.client')}
                                 </p>
                             </div>
                         </motion.div>

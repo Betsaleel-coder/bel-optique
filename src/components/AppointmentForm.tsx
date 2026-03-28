@@ -51,7 +51,7 @@ export default function AppointmentForm() {
       setStep(3);
     } catch (err: any) {
       console.error('Error saving appointment:', err);
-      setError(err.message || 'Une erreur est survenue lors de la réservation.');
+      setError(err.message || t('app.booking_error'));
     } finally {
       setLoading(false);
     }
@@ -220,11 +220,11 @@ export default function AppointmentForm() {
                         onChange={(e) => setFormData({ ...formData, country: e.target.value })}
                         className="w-full pl-12 pr-4 py-3 border border-bel-dark/20 rounded-xl focus:ring-2 focus:ring-bel-accent focus:border-transparent outline-none transition-all appearance-none bg-white font-medium"
                       >
-                        <option value="République du Congo">République du Congo</option>
-                        <option value="République Démocratique du Congo">RDC</option>
-                        <option value="Gabon">Gabon</option>
-                        <option value="Cameroun">Cameroun</option>
-                        <option value="Autre">Autre (Préciser en notes)</option>
+                        <option value="République du Congo">{t('app.country_congo')}</option>
+                        <option value="République Démocratique du Congo">{t('app.country_drc')}</option>
+                        <option value="Gabon">{t('app.country_gabon')}</option>
+                        <option value="Cameroun">{t('app.country_cameroun')}</option>
+                        <option value="Autre">{t('app.country_other')}</option>
                       </select>
                     </div>
                   </div>
@@ -248,7 +248,7 @@ export default function AppointmentForm() {
                             <option value="Oyo">Oyo</option>
                           </>
                         ) : (
-                          <option value="Autre">Autre (Préciser en notes)</option>
+                          <option value="Autre">{t('app.city_other')}</option>
                         )}
                       </select>
                     </div>

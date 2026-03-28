@@ -353,278 +353,27 @@ export default function VirtualTryOn() {
           </p>
         </div>
 
-        <div className="flex flex-col gap-8">
-          {/* Main Viewer Area */}
-          <div className="flex flex-col xl:flex-row gap-4 justify-center items-center w-full max-w-7xl mx-auto px-4">
-            <div className="w-full max-w-5xl h-[50vh] sm:h-auto sm:max-h-[80vh] bg-black rounded-3xl overflow-hidden aspect-[3/4] sm:aspect-video relative shadow-2xl border border-white/10">
-              {!isCameraActive && tryOnMode !== 'photo' ? (
-                <div className="absolute inset-0 flex flex-col items-center justify-center p-4 sm:p-8 text-center bg-bel-dark/80 overflow-y-auto bel-scrollbar">
-                  <h3 className="font-serif text-2xl sm:text-3xl font-medium mb-4 sm:mb-8 text-white mt-auto">{t('vto.title') || "Choisissez votre mode d'essai"}</h3>
-                  <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 mb-auto">
-                    {/* Mode Photo */}
-                    <div
-                      className="bg-white/5 p-4 sm:p-6 rounded-3xl border border-white/10 flex flex-col items-center hover:bg-white/10 transition-colors w-full sm:w-64 group cursor-pointer"
-                      onClick={() => setTryOnMode('photo')}
-                    >
-                      <div className="w-12 h-12 sm:w-16 sm:h-16 bg-bel-accent/20 rounded-full flex items-center justify-center mb-3 sm:mb-4 group-hover:bg-bel-accent transition-colors">
-                        <ImageIcon size={24} className="text-bel-accent group-hover:text-bel-dark transition-colors sm:hidden" />
-                        <ImageIcon size={32} className="text-bel-accent group-hover:text-bel-dark transition-colors hidden sm:block" />
-                      </div>
-                      <h4 className="text-lg sm:text-xl font-bold mb-1 sm:mb-2 text-white">Mode Photo</h4>
-                      <p className="text-xs sm:text-sm text-bel-light/60 mb-4 sm:mb-6 flex-grow">Uploadez une photo de face pour un essai statique ultra-précis.</p>
-                      <button className="w-full bg-bel-accent text-bel-dark px-4 py-2 rounded-full font-bold hover:scale-105 transition-transform text-sm sm:text-base">
-                        Choisir
-                      </button>
-                    </div>
-
-                    {/* Mode Video (Temporarily Hidden for Refinement) */}
-                    {/* 
-                    <div
-                      className="bg-white/5 p-4 sm:p-6 rounded-3xl border border-white/10 flex flex-col items-center hover:bg-white/10 transition-colors w-full sm:w-64 group cursor-pointer"
-                      onClick={() => { setTryOnMode('video'); setIsCameraActive(true); }}
-                    >
-                      <div className="w-12 h-12 sm:w-16 sm:h-16 bg-bel-accent/20 rounded-full flex items-center justify-center mb-3 sm:mb-4 group-hover:bg-bel-accent transition-colors">
-                        <Video size={24} className="text-bel-accent group-hover:text-bel-dark transition-colors sm:hidden" />
-                        <Video size={32} className="text-bel-accent group-hover:text-bel-dark transition-colors hidden sm:block" />
-                      </div>
-                      <h4 className="text-lg sm:text-xl font-bold mb-1 sm:mb-2 text-white">Vidéo Live</h4>
-                      <p className="text-xs sm:text-sm text-bel-light/60 mb-4 sm:mb-6 flex-grow">Utilisez votre webcam pour voir les lunettes en mouvement.</p>
-                      <button className="w-full bg-bel-accent text-bel-dark px-4 py-2 rounded-full font-bold hover:scale-105 transition-transform text-sm sm:text-base">
-                        Choisir
-                      </button>
-                    </div>
-                    */}
-                  </div>
-                </div>
-              ) : tryOnMode === 'photo' && !uploadedPhoto ? (
-                <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center bg-bel-dark/80">
-                  <h3 className="font-serif text-2xl sm:text-3xl font-medium mb-4 text-white">{t('vto.upload_title')}</h3>
-                  <p className="text-bel-light/70 mb-8 max-w-md">Assurez-vous que votre visage est bien éclairé et bien de face.</p>
-                  <label className="cursor-pointer bg-bel-accent text-bel-dark px-8 py-4 rounded-full font-bold shadow-xl shadow-bel-accent/20 hover:scale-105 transition-all flex items-center gap-3">
-                    <ImageIcon size={24} />
-                    {t('vto.select_image')}
-                    <input type="file" accept="image/*" className="hidden" onChange={(e) => {
-                      if (e.target.files && e.target.files[0]) {
-                        const url = URL.createObjectURL(e.target.files[0]);
-                        setUploadedPhoto(url);
-                      }
-                    }} />
-                  </label>
-                  <button onClick={() => setTryOnMode(null)} className="mt-6 text-white/50 hover:text-white underline">Retour</button>
-                </div>
-              ) : tryOnMode === 'photo' && uploadedPhoto ? (
-                <div className="absolute inset-0 bg-black flex items-center justify-center overflow-hidden">
-                  <img src={uploadedPhoto} className="absolute inset-0 w-full h-full object-contain scale-x-[-1] z-10" alt="Uploaded face" />
-
-                  {isPhotoProcessing && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/40 z-20">
-                      <RefreshCw className="animate-spin text-bel-accent" size={32} />
-                    </div>
-                  )}
-
-                  {!isPhotoProcessing && landmarks && (
-                    <ARScene
-                      landmarksRef={landmarksRef}
-                      videoElement={null}
-                      sourceWidth={photoDimensions?.width}
-                      sourceHeight={photoDimensions?.height}
-                      imageUrl={selectedGlasses?.tryOnImage || selectedGlasses?.image}
-                      productId={selectedGlasses?.id}
-                      productName={selectedGlasses?.name}
-                      objectFit="contain"
-                    />
-                  )}
-
-                  <div className="absolute top-4 right-4 flex gap-2 z-50">
-                    <button
-                      onClick={handleCapture}
-                      className="w-10 h-10 bg-black/50 backdrop-blur-md border border-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-colors text-white"
-                      title="Capturer"
-                    >
-                      <Camera size={20} />
-                    </button>
-                    <button
-                      onClick={() => { setUploadedPhoto(null); setTryOnMode(null); }}
-                      className="w-10 h-10 bg-black/50 backdrop-blur-md border border-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-colors text-white"
-                    >
-                      <X size={20} />
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className="absolute inset-0 bg-black flex items-center justify-center">
-                  {/* Real-time Video Feed */}
-                  <video
-                    ref={videoRef}
-                    className="absolute inset-0 w-full h-full object-contain scale-x-[-1] z-10"
-                    style={{ filter: 'none' }}
-                    playsInline
-                    autoPlay
-                    muted
-                  />
-
-                  {/* 3D AR Overlay */}
-                  {!capturedImage && (
-                    <ARScene
-                      landmarksRef={landmarksRef}
-                      videoElement={videoRef.current}
-                      imageUrl={selectedGlasses?.tryOnImage || selectedGlasses?.image}
-                      productId={selectedGlasses?.id}
-                      productName={selectedGlasses?.name}
-                      objectFit="contain"
-                    />
-                  )}
-
-                  {cameraError && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/80 z-50 p-6 text-center">
-                      <div className="max-w-xs">
-                        <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                          <X size={32} className="text-red-500" />
-                        </div>
-                        <h3 className="text-xl font-bold mb-2">Erreur Caméra</h3>
-                        <p className="text-sm text-bel-light/70 mb-6">{cameraError}</p>
-                        <button
-                          onClick={() => setIsCameraActive(false)}
-                          className="bg-white text-black px-6 py-2 rounded-full font-bold hover:bg-bel-accent transition-colors"
-                        >
-                          Fermer
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {!landmarks && !cameraError && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/40 z-20">
-                      <div className="text-center">
-                        <RefreshCw className="animate-spin mx-auto mb-4 text-bel-accent" size={32} />
-                        <p className="text-bel-light/50 font-mono text-sm uppercase tracking-widest">{t('vto.init_ar')}</p>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Overlay UI */}
-                  <div className="absolute top-4 right-4 flex gap-2">
-                    <button
-                      onClick={() => setIsCameraActive(false)}
-                      className="w-10 h-10 bg-black/50 border border-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-colors"
-                    >
-                      <X size={20} />
-                    </button>
-                  </div>
-
-                  <div className="absolute inset-0 pointer-events-none flex items-center justify-center opacity-50">
-                    <div className="w-64 h-24 border-2 border-dashed border-bel-accent/50 rounded-xl flex items-center justify-center">
-                      <span className="text-bel-accent/50 text-xs font-mono">{t('vto.detect_zone')}</span>
-                    </div>
-                  </div>
-
-                  {/* Flash Effect */}
-                  {isFlashActive && (
-                    <div className="absolute inset-0 bg-white z-50 animate-flash" />
-                  )}
-                  {/* Captured Preview Overlay */}
-                  {capturedImage && (
-                    <div className="absolute inset-0 z-40 bg-black flex flex-col items-center justify-center p-4 animate-in fade-in zoom-in-95">
-                      <img src={capturedImage} className="max-w-full max-h-[70%] rounded-2xl shadow-2xl mb-6 shadow-bel-accent/20" alt="Captured" />
-                      <div className="flex flex-wrap justify-center gap-3">
-                        <button
-                          onClick={() => setCapturedImage(null)}
-                          className="bg-white/10 text-white px-4 py-2 sm:px-6 sm:py-3 rounded-full font-medium hover:bg-white/20 transition-all border border-white/10"
-                        >
-                          {t('vto.redo') || "Refaire"}
-                        </button>
-
-                        <button
-                          onClick={() => { setPinnedImage(capturedImage); setCapturedImage(null); }}
-                          className="bg-bel-accent text-bel-dark px-4 py-2 sm:px-6 sm:py-3 rounded-full font-bold hover:scale-105 transition-transform flex items-center gap-2"
-                        >
-                          <ImageIcon size={18} />
-                          {"Comparer"}
-                        </button>
-
-                        <button
-                          onClick={handleDownload}
-                          className="bg-white/10 text-white px-4 py-2 sm:px-6 sm:py-3 rounded-full font-medium hover:bg-white/20 transition-all"
-                        >
-                          {t('vto.download') || "Télécharger"}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                  {/* Main Action Button */}
-                  {!isCalibrating && !capturedImage ? (
-                    <div className="absolute bottom-4 sm:bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-4">
-                      <button
-                        onClick={handleCapture}
-                        className="bg-bel-accent text-bel-dark px-6 py-3 sm:px-8 sm:py-4 rounded-full font-bold shadow-xl shadow-bel-accent/20 hover:scale-105 transition-all flex items-center gap-3 pointer-events-auto text-sm sm:text-base"
-                      >
-                        <Camera size={20} className="sm:size-6" />
-                        {t('vto.capture_btn')}
-                      </button>
-                    </div>
-                  ) : null}
-
-                  {/* Calibration Overlay */}
-                  {isCalibrating && (
-                    <div className="absolute inset-0 z-30 pointer-events-none">
-                      <div className="absolute inset-0 bg-black/60 pointer-events-auto" />
-                      <div className="absolute inset-0 flex flex-col items-center justify-center p-4">
-                        <div className="text-center mb-8 z-40">
-                          <p className="text-bel-accent font-bold mb-2">CALIBRATION</p>
-                          <p className="text-white text-sm max-w-xs">{t('vto.calib_instruction') || "Alignez votre carte de fidélité ou bancaire dans le rectangle."}</p>
-                        </div>
-
-                        <div
-                          ref={overlayRef}
-                          className="w-80 h-48 border-4 border-bel-accent rounded-xl relative z-40 flex items-center justify-center overflow-hidden bg-bel-accent/5"
-                        >
-                          {/* Card Silhouette Guide */}
-                          <div className="absolute inset-4 border-2 border-dashed border-bel-accent/40 rounded-lg flex flex-col items-center justify-center">
-                            <div className="w-12 h-8 border border-bel-accent/30 rounded-sm mb-2 self-start ml-4" /> {/* Chip placeholder */}
-                            <div className="w-3/4 h-2 bg-bel-accent/20 rounded-full mb-2" />
-                            <div className="w-1/2 h-2 bg-bel-accent/20 rounded-full" />
-                          </div>
-                          <div className="absolute inset-0 border-[20px] border-bel-accent/10 rounded-lg" />
-                          <Ruler className="text-bel-accent opacity-50 relative z-10" size={48} />
-                        </div>
-
-                        <button
-                          onClick={completeCalibration}
-                          className="mt-8 bg-bel-accent text-bel-dark px-10 py-4 rounded-full font-bold shadow-xl z-40 pointer-events-auto hover:scale-105 transition-all"
-                        >
-                          {t('vto.calib_confirm')}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Side-by-Side Pinned Image */}
-            {pinnedImage && (
-              <div className="w-full xl:w-1/2 max-w-5xl bg-black rounded-3xl overflow-hidden aspect-[4/3] sm:aspect-video relative shadow-2xl border border-bel-accent animate-in slide-in-from-right">
-                <img src={pinnedImage} className="absolute inset-0 w-full h-full object-cover scale-x-[-1]" alt="Pinned Try-on" />
-                <div className="absolute top-4 left-4 bg-bel-accent text-bel-dark px-3 py-1 rounded-full text-xs font-bold uppercase">
-                  Comparaison
-                </div>
-                <div className="absolute top-4 right-4">
-                  <button
-                    onClick={() => setPinnedImage(null)}
-                    className="w-10 h-10 bg-black/50 border border-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-colors text-white"
-                  >
-                    <X size={20} />
-                  </button>
+        <div className="flex flex-col gap-16">
+          {/* Step 1: Glasses Selection */}
+          <div className="w-full max-w-6xl mx-auto space-y-6">
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 px-4 sm:px-0">
+              <div>
+                <h2 className="text-bel-accent font-bold uppercase tracking-widest text-sm mb-2 flex items-center gap-3">
+                  <span className="w-8 h-8 rounded-full bg-bel-accent text-bel-dark flex items-center justify-center text-lg font-black">1</span>
+                  {t('vto.step1')}
+                </h2>
+                <p className="text-bel-light/70 text-sm max-w-xl">{t('vto.step1_desc')}</p>
+              </div>
+              <div className="hidden md:block">
+                <div className="px-4 py-2 bg-bel-accent/10 border border-bel-accent/20 rounded-full text-xs text-bel-accent flex items-center gap-2 animate-pulse">
+                  <Sparkles size={14} />
+                  {t('vto.change_anytime')}
                 </div>
               </div>
-            )}
-          </div>
+            </div>
 
-          {/* Glasses Selection & Info */}
-          <div className="w-full max-w-6xl mx-auto space-y-8">
-            {/* New Horizontal Glasses Selection Carousel */}
-            <div className="w-full bg-bel-light text-bel-dark rounded-3xl p-6 shadow-xl relative">
-              <h3 className="font-serif text-xl font-bold mb-4">{t('vto.available_models') || "Modèles disponibles"}</h3>
+            <div className="w-full bg-bel-light text-bel-dark rounded-3xl p-6 shadow-2xl relative border-t-4 border-bel-accent">
+              <h3 className="font-serif text-xl font-bold mb-4 opacity-50 uppercase tracking-tighter text-xs">{t('vto.available_models') || "Modèles disponibles"}</h3>
               <div className="flex gap-4 overflow-x-auto pb-4 bel-scrollbar snap-x">
                 {glassesList.map((glasses) => (
                   <button
@@ -650,9 +399,273 @@ export default function VirtualTryOn() {
                   </button>
                 ))}
               </div>
+              <div className="mt-4 md:hidden">
+                <p className="text-[10px] text-center text-bel-dark/40 font-medium italic">
+                  ↔ {t('vto.change_anytime')}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Step 2: Main Viewer Area */}
+          <div className="w-full max-w-7xl mx-auto px-4 space-y-6">
+            <div className="flex flex-col px-4 sm:px-0">
+              <h2 className="text-bel-accent font-bold uppercase tracking-widest text-sm mb-2 flex items-center gap-3">
+                <span className="w-8 h-8 rounded-full bg-bel-accent text-bel-dark flex items-center justify-center text-lg font-black">2</span>
+                {t('vto.step2')}
+              </h2>
+              <p className="text-bel-light/70 text-sm max-w-xl">{t('vto.step2_desc')}</p>
             </div>
 
-            {/* Bottom Info Row (PD & Help) */}
+            <div className="flex flex-col xl:flex-row gap-4 justify-center items-center w-full">
+              <div className="w-full max-w-5xl h-[50vh] sm:h-auto sm:max-h-[80vh] bg-black rounded-3xl overflow-hidden aspect-[3/4] sm:aspect-video relative shadow-2xl border border-white/10">
+                {!isCameraActive && tryOnMode !== 'photo' ? (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center p-4 sm:p-8 text-center bg-bel-dark/80 overflow-y-auto bel-scrollbar">
+                    <h3 className="font-serif text-2xl sm:text-3xl font-medium mb-4 sm:mb-8 text-white mt-auto">{t('vto.title') || "Choisissez votre mode d'essai"}</h3>
+                    <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 mb-auto">
+                      {/* Mode Photo */}
+                      <div
+                        className="bg-white/5 p-4 sm:p-6 rounded-3xl border border-white/10 flex flex-col items-center hover:bg-white/10 transition-colors w-full sm:w-64 group cursor-pointer"
+                        onClick={() => setTryOnMode('photo')}
+                      >
+                        <div className="w-12 h-12 sm:w-16 sm:h-16 bg-bel-accent/20 rounded-full flex items-center justify-center mb-3 sm:mb-4 group-hover:bg-bel-accent transition-colors">
+                          <ImageIcon size={24} className="text-bel-accent group-hover:text-bel-dark transition-colors sm:hidden" />
+                          <ImageIcon size={32} className="text-bel-accent group-hover:text-bel-dark transition-colors hidden sm:block" />
+                        </div>
+                        <h4 className="text-lg sm:text-xl font-bold mb-1 sm:mb-2 text-white">Mode Photo</h4>
+                        <p className="text-xs sm:text-sm text-bel-light/60 mb-4 sm:mb-6 flex-grow">Uploadez une photo de face pour un essai statique ultra-précis.</p>
+                        <button className="w-full bg-bel-accent text-bel-dark px-4 py-2 rounded-full font-bold hover:scale-105 transition-transform text-sm sm:text-base">
+                          Choisir
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ) : tryOnMode === 'photo' && !uploadedPhoto ? (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center bg-bel-dark/80">
+                    <h3 className="font-serif text-2xl sm:text-3xl font-medium mb-4 text-white">{t('vto.upload_title')}</h3>
+                    <p className="text-bel-light/70 mb-8 max-w-md">Assurez-vous que votre visage est bien éclairé et bien de face.</p>
+                    <label className="cursor-pointer bg-bel-accent text-bel-dark px-8 py-4 rounded-full font-bold shadow-xl shadow-bel-accent/20 hover:scale-105 transition-all flex items-center gap-3">
+                      <ImageIcon size={24} />
+                      {t('vto.select_image')}
+                      <input type="file" accept="image/*" className="hidden" onChange={(e) => {
+                        if (e.target.files && e.target.files[0]) {
+                          const url = URL.createObjectURL(e.target.files[0]);
+                          setUploadedPhoto(url);
+                        }
+                      }} />
+                    </label>
+                    <button onClick={() => setTryOnMode(null)} className="mt-6 text-white/50 hover:text-white underline">Retour</button>
+                  </div>
+                ) : tryOnMode === 'photo' && uploadedPhoto ? (
+                  <div className="absolute inset-0 bg-black flex items-center justify-center overflow-hidden">
+                    <img src={uploadedPhoto} className="absolute inset-0 w-full h-full object-contain scale-x-[-1] z-10" alt="Uploaded face" />
+
+                    {isPhotoProcessing && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/40 z-20">
+                        <RefreshCw className="animate-spin text-bel-accent" size={32} />
+                      </div>
+                    )}
+
+                    {!isPhotoProcessing && landmarks && (
+                      <ARScene
+                        landmarksRef={landmarksRef}
+                        videoElement={null}
+                        sourceWidth={photoDimensions?.width}
+                        sourceHeight={photoDimensions?.height}
+                        imageUrl={selectedGlasses?.tryOnImage || selectedGlasses?.image}
+                        productId={selectedGlasses?.id}
+                        productName={selectedGlasses?.name}
+                        objectFit="contain"
+                      />
+                    )}
+
+                    <div className="absolute top-4 right-4 flex gap-2 z-50">
+                      <button
+                        onClick={handleCapture}
+                        className="w-10 h-10 bg-black/50 backdrop-blur-md border border-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-colors text-white"
+                        title="Capturer"
+                      >
+                        <Camera size={20} />
+                      </button>
+                      <button
+                        onClick={() => { setUploadedPhoto(null); setTryOnMode(null); }}
+                        className="w-10 h-10 bg-black/50 backdrop-blur-md border border-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-colors text-white"
+                      >
+                        <X size={20} />
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="absolute inset-0 bg-black flex items-center justify-center">
+                    {/* Real-time Video Feed */}
+                    <video
+                      ref={videoRef}
+                      className="absolute inset-0 w-full h-full object-contain scale-x-[-1] z-10"
+                      style={{ filter: 'none' }}
+                      playsInline
+                      autoPlay
+                      muted
+                    />
+
+                    {/* 3D AR Overlay */}
+                    {!capturedImage && (
+                      <ARScene
+                        landmarksRef={landmarksRef}
+                        videoElement={videoRef.current}
+                        imageUrl={selectedGlasses?.tryOnImage || selectedGlasses?.image}
+                        productId={selectedGlasses?.id}
+                        productName={selectedGlasses?.name}
+                        objectFit="contain"
+                      />
+                    )}
+
+                    {cameraError && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/80 z-50 p-6 text-center">
+                        <div className="max-w-xs">
+                          <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <X size={32} className="text-red-500" />
+                          </div>
+                          <h3 className="text-xl font-bold mb-2">Erreur Caméra</h3>
+                          <p className="text-sm text-bel-light/70 mb-6">{cameraError}</p>
+                          <button
+                            onClick={() => setIsCameraActive(false)}
+                            className="bg-white text-black px-6 py-2 rounded-full font-bold hover:bg-bel-accent transition-colors"
+                          >
+                            Fermer
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {!landmarks && !cameraError && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/40 z-20">
+                        <div className="text-center">
+                          <RefreshCw className="animate-spin mx-auto mb-4 text-bel-accent" size={32} />
+                          <p className="text-bel-light/50 font-mono text-sm uppercase tracking-widest">{t('vto.init_ar')}</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Overlay UI */}
+                    <div className="absolute top-4 right-4 flex gap-2">
+                      <button
+                        onClick={() => setIsCameraActive(false)}
+                        className="w-10 h-10 bg-black/50 border border-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-colors"
+                      >
+                        <X size={20} />
+                      </button>
+                    </div>
+
+                    <div className="absolute inset-0 pointer-events-none flex items-center justify-center opacity-50">
+                      <div className="w-64 h-24 border-2 border-dashed border-bel-accent/50 rounded-xl flex items-center justify-center">
+                        <span className="text-bel-accent/50 text-xs font-mono">{t('vto.detect_zone')}</span>
+                      </div>
+                    </div>
+
+                    {/* Flash Effect */}
+                    {isFlashActive && (
+                      <div className="absolute inset-0 bg-white z-50 animate-flash" />
+                    )}
+                    {/* Captured Preview Overlay */}
+                    {capturedImage && (
+                      <div className="absolute inset-0 z-40 bg-black flex flex-col items-center justify-center p-4 animate-in fade-in zoom-in-95">
+                        <img src={capturedImage} className="max-w-full max-h-[70%] rounded-2xl shadow-2xl mb-6 shadow-bel-accent/20" alt="Captured" />
+                        <div className="flex flex-wrap justify-center gap-3">
+                          <button
+                            onClick={() => setCapturedImage(null)}
+                            className="bg-white/10 text-white px-4 py-2 sm:px-6 sm:py-3 rounded-full font-medium hover:bg-white/20 transition-all border border-white/10"
+                          >
+                            {t('vto.redo') || "Refaire"}
+                          </button>
+
+                          <button
+                            onClick={() => { setPinnedImage(capturedImage); setCapturedImage(null); }}
+                            className="bg-bel-accent text-bel-dark px-4 py-2 sm:px-6 sm:py-3 rounded-full font-bold hover:scale-105 transition-transform flex items-center gap-2"
+                          >
+                            <ImageIcon size={18} />
+                            {"Comparer"}
+                          </button>
+
+                          <button
+                            onClick={handleDownload}
+                            className="bg-white/10 text-white px-4 py-2 sm:px-6 sm:py-3 rounded-full font-medium hover:bg-white/20 transition-all"
+                          >
+                            {t('vto.download') || "Télécharger"}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    {/* Main Action Button */}
+                    {!isCalibrating && !capturedImage ? (
+                      <div className="absolute bottom-4 sm:bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-4">
+                        <button
+                          onClick={handleCapture}
+                          className="bg-bel-accent text-bel-dark px-6 py-3 sm:px-8 sm:py-4 rounded-full font-bold shadow-xl shadow-bel-accent/20 hover:scale-105 transition-all flex items-center gap-3 pointer-events-auto text-sm sm:text-base"
+                        >
+                          <Camera size={20} className="sm:size-6" />
+                          {t('vto.capture_btn')}
+                        </button>
+                      </div>
+                    ) : null}
+
+                    {/* Calibration Overlay */}
+                    {isCalibrating && (
+                      <div className="absolute inset-0 z-30 pointer-events-none">
+                        <div className="absolute inset-0 bg-black/60 pointer-events-auto" />
+                        <div className="absolute inset-0 flex flex-col items-center justify-center p-4">
+                          <div className="text-center mb-8 z-40">
+                            <p className="text-bel-accent font-bold mb-2">CALIBRATION</p>
+                            <p className="text-white text-sm max-w-xs">{t('vto.calib_instruction') || "Alignez votre carte de fidélité ou bancaire dans le rectangle."}</p>
+                          </div>
+
+                          <div
+                            ref={overlayRef}
+                            className="w-80 h-48 border-4 border-bel-accent rounded-xl relative z-40 flex items-center justify-center overflow-hidden bg-bel-accent/5"
+                          >
+                            {/* Card Silhouette Guide */}
+                            <div className="absolute inset-4 border-2 border-dashed border-bel-accent/40 rounded-lg flex flex-col items-center justify-center">
+                              <div className="w-12 h-8 border border-bel-accent/30 rounded-sm mb-2 self-start ml-4" /> {/* Chip placeholder */}
+                              <div className="w-3/4 h-2 bg-bel-accent/20 rounded-full mb-2" />
+                              <div className="w-1/2 h-2 bg-bel-accent/20 rounded-full" />
+                            </div>
+                            <div className="absolute inset-0 border-[20px] border-bel-accent/10 rounded-lg" />
+                            <Ruler className="text-bel-accent opacity-50 relative z-10" size={48} />
+                          </div>
+
+                          <button
+                            onClick={completeCalibration}
+                            className="mt-8 bg-bel-accent text-bel-dark px-10 py-4 rounded-full font-bold shadow-xl z-40 pointer-events-auto hover:scale-105 transition-all"
+                          >
+                            {t('vto.calib_confirm')}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Side-by-Side Pinned Image */}
+              {pinnedImage && (
+                <div className="w-full xl:w-1/2 max-w-5xl bg-black rounded-3xl overflow-hidden aspect-[4/3] sm:aspect-video relative shadow-2xl border border-bel-accent animate-in slide-in-from-right">
+                  <img src={pinnedImage} className="absolute inset-0 w-full h-full object-cover scale-x-[-1]" alt="Pinned Try-on" />
+                  <div className="absolute top-4 left-4 bg-bel-accent text-bel-dark px-3 py-1 rounded-full text-xs font-bold uppercase">
+                    Comparaison
+                  </div>
+                  <div className="absolute top-4 right-4">
+                    <button
+                      onClick={() => setPinnedImage(null)}
+                      className="w-10 h-10 bg-black/50 border border-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-colors text-white"
+                    >
+                      <X size={20} />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="w-full max-w-6xl mx-auto px-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               {/* PD Measurement Section */}
               <div className="bg-bel-light text-bel-dark rounded-3xl p-6 shadow-xl">

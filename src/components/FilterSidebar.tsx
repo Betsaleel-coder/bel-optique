@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ChevronDown, ChevronUp, Check } from 'lucide-react';
 import clsx from 'clsx';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface FilterCategory {
   id: string;
@@ -15,6 +16,7 @@ interface FilterSidebarProps {
 }
 
 export default function FilterSidebar({ categories, selectedFilters, onFilterChange }: FilterSidebarProps) {
+  const { t } = useLanguage();
   const [openCategories, setOpenCategories] = useState<Record<string, boolean>>(
     categories.reduce((acc, cat) => ({ ...acc, [cat.id]: true }), {})
   );
@@ -27,7 +29,7 @@ export default function FilterSidebar({ categories, selectedFilters, onFilterCha
     <div className="w-full lg:w-64 flex-shrink-0 pr-8 border-r border-bel-dark/10">
       <div className="sticky top-28 space-y-8">
         <div>
-          <h3 className="font-serif text-2xl font-medium mb-6">Filtres</h3>
+          <h3 className="font-serif text-2xl font-medium mb-6">{t('filter.title')}</h3>
           <div className="h-px bg-bel-dark/10 w-full mb-6"></div>
         </div>
 

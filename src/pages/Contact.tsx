@@ -49,7 +49,7 @@ export default function Contact() {
       setFormData({ name: '', email: '', phone: '', subject: '', message: '' });
     } catch (error: any) {
       console.error('Error submitting contact:', error);
-      alert(`Erreur: ${error.message || 'Erreur lors de l\'envoi du message'}`);
+      alert(`${t('contact.error')}: ${error.message || t('contact.error')}`);
     } finally {
       setSubmittingContact(false);
     }
@@ -76,7 +76,7 @@ export default function Contact() {
       setReviewData({ name: '', email: '', comment: '', rating: 5 });
     } catch (error) {
       console.error('Error submitting review:', error);
-      alert('Erreur lors de l\'envoi de l\'avis.');
+      alert(t('contact.error'));
     } finally {
       setSubmittingReview(false);
     }

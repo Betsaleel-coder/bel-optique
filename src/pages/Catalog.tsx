@@ -142,7 +142,7 @@ export default function Catalog() {
                         type="text"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder="Rechercher..."
+                        placeholder={t('cat.search')}
                         className="w-full px-4 py-2 bg-white border border-bel-dark/10 rounded-xl focus:ring-2 focus:ring-bel-accent outline-none text-sm"
                     />
                 </div>
