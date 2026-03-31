@@ -65,7 +65,7 @@ export default function Home() {
             alt="Person wearing stylish glasses"
             className="w-full h-full object-cover object-[center_20%]"
           />
-          <div className="absolute inset-0 bg-bel-dark/30"></div>
+          <div className="absolute inset-0 bg-black/60"></div>
         </div>
 
         <div className="relative z-10 text-center px-4 max-w-5xl mx-auto">
