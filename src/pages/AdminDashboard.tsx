@@ -746,7 +746,7 @@ export default function AdminDashboard() {
 
                                 <div className="p-4 border border-gray-100 rounded-xl bg-white mb-4 shadow-sm">
                                     <label className="block text-base font-bold text-bel-dark mb-1">1. Photo de Présentation (Catalogue)</label>
-                                    <p className="text-xs text-bel-dark/60 mb-4">Cette photo sera affichée dans la boutique et sur les miniatures.</p>
+                                    <p className="text-xs text-bel-dark/60 mb-4">Cette photo sera affichée dans nos Officines et sur les miniatures.</p>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         <div>
                                             <label className="block text-xs font-bold text-bel-dark/80 uppercase tracking-widest mb-2 text-bel-accent">Télécharger (Recommandé)</label>

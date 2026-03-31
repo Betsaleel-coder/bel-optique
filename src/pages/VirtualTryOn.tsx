@@ -9,6 +9,7 @@ export default function VirtualTryOn() {
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [tryOnMode, setTryOnMode] = useState<'photo' | 'video' | null>(null);
   const [uploadedPhoto, setUploadedPhoto] = useState<string | null>(null);
+  const [photoSourceChoice, setPhotoSourceChoice] = useState<'camera' | 'upload' | null>(null);
   const [isPhotoProcessing, setIsPhotoProcessing] = useState(false);
   const [pinnedImage, setPinnedImage] = useState<string | null>(null);
   const [selectedGlasses, setSelectedGlasses] = useState<any>(null);
@@ -309,6 +310,28 @@ export default function VirtualTryOn() {
     }
   };
 
+  const handleCaptureForVTO = () => {
+    if (!videoRef.current) return;
+    const canvas = document.createElement('canvas');
+    canvas.width = videoRef.current.videoWidth;
+    canvas.height = videoRef.current.videoHeight;
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      setIsFlashActive(true);
+      setTimeout(() => setIsFlashActive(false), 150);
+      
+      // Mirror snapshot to match preview
+      ctx.translate(canvas.width, 0);
+      ctx.scale(-1, 1);
+      ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+      
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+      setUploadedPhoto(dataUrl);
+      setIsCameraActive(false);
+      setPhotoSourceChoice(null);
+    }
+  };
+
   const handleDownload = () => {
     if (!capturedImage) return;
     const link = document.createElement('a');
@@ -318,9 +341,8 @@ export default function VirtualTryOn() {
   };
 
   const handleShare = () => {
-    const pdText = pd ? `\n\n- Mon Écart Pupillaire (EP) : ${pd} mm` : '';
     const baseMessage = t('wa.interest').replace('{name}', selectedGlasses?.name || '');
-    const fullMessage = `${baseMessage}${pdText}\n\nVoici mon choix !`;
+    const fullMessage = `${baseMessage}\n\nVoici mon choix !`;
     const whatsappUrl = `https://wa.me/242044744456?text=${encodeURIComponent(fullMessage)}`;
     window.open(whatsappUrl, '_blank');
   };
@@ -448,20 +470,104 @@ export default function VirtualTryOn() {
                     </div>
                   </div>
                 ) : tryOnMode === 'photo' && !uploadedPhoto ? (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center bg-bel-dark/80">
-                    <h3 className="font-serif text-2xl sm:text-3xl font-medium mb-4 text-white">{t('vto.upload_title')}</h3>
-                    <p className="text-bel-light/70 mb-8 max-w-md">Assurez-vous que votre visage est bien éclairé et bien de face.</p>
-                    <label className="cursor-pointer bg-bel-accent text-bel-dark px-8 py-4 rounded-full font-bold shadow-xl shadow-bel-accent/20 hover:scale-105 transition-all flex items-center gap-3">
-                      <ImageIcon size={24} />
-                      {t('vto.select_image')}
-                      <input type="file" accept="image/*" className="hidden" onChange={(e) => {
-                        if (e.target.files && e.target.files[0]) {
-                          const url = URL.createObjectURL(e.target.files[0]);
-                          setUploadedPhoto(url);
-                        }
-                      }} />
-                    </label>
-                    <button onClick={() => setTryOnMode(null)} className="mt-6 text-white/50 hover:text-white underline">Retour</button>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center p-4 sm:p-8 text-center bg-bel-dark/80 overflow-y-auto bel-scrollbar">
+                    {!photoSourceChoice ? (
+                      <div className="animate-in fade-in zoom-in duration-300 flex flex-col items-center">
+                        <h3 className="font-serif text-2xl sm:text-3xl font-medium mb-8 text-white">{t('vto.mode_selection_title')}</h3>
+                        <div className="flex flex-col sm:flex-row gap-6 mb-8">
+                          {/* Option: Camera */}
+                          <button
+                            onClick={() => { setPhotoSourceChoice('camera'); setIsCameraActive(true); }}
+                            className="group flex flex-col items-center p-6 bg-white/5 border border-white/10 rounded-3xl hover:bg-white/10 transition-all w-full sm:w-64"
+                          >
+                            <div className="w-16 h-16 bg-bel-accent/20 rounded-full flex items-center justify-center mb-4 group-hover:bg-bel-accent transition-colors">
+                              <Camera size={32} className="text-bel-accent group-hover:text-bel-dark" />
+                            </div>
+                            <h4 className="text-lg font-bold text-white mb-2">{t('vto.take_photo_live')}</h4>
+                            <p className="text-xs text-bel-light/60">{t('vto.camera_desc')}</p>
+                          </button>
+
+                          {/* Option: Upload */}
+                          <button
+                            onClick={() => setPhotoSourceChoice('upload')}
+                            className="group flex flex-col items-center p-6 bg-white/5 border border-white/10 rounded-3xl hover:bg-white/10 transition-all w-full sm:w-64"
+                          >
+                            <div className="w-16 h-16 bg-bel-accent/20 rounded-full flex items-center justify-center mb-4 group-hover:bg-bel-accent transition-colors">
+                              <ImageIcon size={32} className="text-bel-accent group-hover:text-bel-dark" />
+                            </div>
+                            <h4 className="text-lg font-bold text-white mb-2">{t('vto.upload_from_gallery')}</h4>
+                            <p className="text-xs text-bel-light/60">{t('vto.upload_title')}</p>
+                          </button>
+                        </div>
+                        <button onClick={() => setTryOnMode(null)} className="text-white/50 hover:text-white underline">{t('app.back')}</button>
+                      </div>
+                    ) : photoSourceChoice === 'upload' ? (
+                      <div className="animate-in fade-in zoom-in duration-300 flex flex-col items-center">
+                        <h3 className="font-serif text-2xl sm:text-3xl font-medium mb-4 text-white">{t('vto.upload_title')}</h3>
+                        <p className="text-bel-light/70 mb-8 max-w-md">Assurez-vous que votre visage est bien éclairé et bien de face.</p>
+                        <label className="cursor-pointer bg-bel-accent text-bel-dark px-8 py-4 rounded-full font-bold shadow-xl shadow-bel-accent/20 hover:scale-105 transition-all flex items-center gap-3">
+                          <ImageIcon size={24} />
+                          {t('vto.select_image')}
+                          <input type="file" accept="image/*" className="hidden" onChange={(e) => {
+                            if (e.target.files && e.target.files[0]) {
+                              const url = URL.createObjectURL(e.target.files[0]);
+                              setUploadedPhoto(url);
+                            }
+                          }} />
+                        </label>
+                        <button onClick={() => setPhotoSourceChoice(null)} className="mt-8 text-white/50 hover:text-white underline">Retour</button>
+                      </div>
+                    ) : (
+                      <div className="absolute inset-0 bg-black flex items-center justify-center">
+                        {/* Feed for Capture */}
+                        <video
+                          ref={videoRef}
+                          className="absolute inset-0 w-full h-full object-contain scale-x-[-1] z-10"
+                          playsInline
+                          autoPlay
+                          muted
+                        />
+                        
+                        {!landmarks && !cameraError && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/40 z-20">
+                            <div className="text-center">
+                              <RefreshCw className="animate-spin mx-auto mb-4 text-bel-accent" size={32} />
+                              <p className="text-bel-light/50 font-mono text-sm uppercase tracking-widest">{t('vto.init_ar')}</p>
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="absolute inset-0 pointer-events-none flex items-center justify-center opacity-30 z-20">
+                          <div className="w-64 h-[32rem] border-2 border-dashed border-white rounded-[100px] flex items-center justify-center">
+                            <span className="text-white text-xs font-mono uppercase tracking-widest">{t('vto.detect_zone')}</span>
+                          </div>
+                        </div>
+
+                        {/* Flash Effect */}
+                        {isFlashActive && (
+                          <div className="absolute inset-0 bg-white z-50 animate-flash" />
+                        )}
+
+                        <div className="absolute bottom-12 flex flex-col items-center gap-4 z-50">
+                          <button
+                            onClick={handleCaptureForVTO}
+                            className="bg-bel-accent text-bel-dark w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center shadow-2xl hover:scale-110 active:scale-95 transition-all border-4 border-white/20"
+                            title={t('vto.capture_btn')}
+                          >
+                            <Camera size={36} />
+                          </button>
+                        </div>
+
+                        <div className="absolute top-4 left-4 z-50">
+                          <button
+                            onClick={() => { setPhotoSourceChoice(null); setIsCameraActive(false); }}
+                            className="w-10 h-10 bg-black/50 border border-white/10 rounded-full flex items-center justify-center hover:bg-white/20 text-white transition-colors"
+                          >
+                            <X size={20} />
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ) : tryOnMode === 'photo' && uploadedPhoto ? (
                   <div className="absolute inset-0 bg-black flex items-center justify-center overflow-hidden">
@@ -675,81 +781,9 @@ export default function VirtualTryOn() {
           </div>
 
           <div className="w-full max-w-6xl mx-auto px-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {/* PD Measurement Section */}
-              <div className="bg-bel-light text-bel-dark rounded-3xl p-6 shadow-xl">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-serif text-xl font-bold flex items-center gap-2">
-                    <Ruler size={20} className="text-bel-accent" />
-                    {t('vto.measure_pd')}
-                  </h3>
-                  <button
-                    onClick={() => setShowPdInfo(!showPdInfo)}
-                    className="text-bel-dark/40 hover:text-bel-accent transition-colors"
-                  >
-                    <Info size={18} />
-                  </button>
-                </div>
-
-                {showPdInfo && (
-                  <div className="bg-blue-50 text-blue-800 p-4 rounded-xl text-xs mb-4 animate-in fade-in slide-in-from-top-2">
-                    {t('vto.measure_info')}
-                  </div>
-                )}
-
-                <div className="bg-bel-gray/50 p-6 rounded-2xl border border-dashed border-bel-dark/10 relative overflow-hidden">
-                  {pd ? (
-                    <div className="text-center">
-                      <div className="flex items-center justify-center gap-2 mb-2">
-                        <div className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 ${isPdStable ? 'bg-green-100 text-green-700' : 'bg-bel-accent/20 text-bel-accent'
-                          }`}>
-                          {isPdStable ? <CheckCircle size={10} /> : <RefreshCw size={10} className="animate-spin" />}
-                          {isPdStable ? t('vto.stable') : t('vto.stabilizing')}
-                        </div>
-                      </div>
-                      <div className="text-4xl font-bold text-bel-accent mb-1">{pd} mm</div>
-                      <div className="text-[10px] font-bold uppercase tracking-widest text-bel-dark/40">
-                        {t('vto.ep')} {!calibrationScale && `(${t('vto.estimate')})`}
-                      </div>
-                      <button
-                        onClick={() => setPd(null)}
-                        className="mt-4 text-xs font-semibold text-bel-dark/60 hover:text-bel-dark underline"
-                      >
-                        {t('vto.redo')}
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="text-center">
-                      <p className="text-sm text-bel-dark/70 mb-4">
-                        {t('vto.measure_instruction')}
-                      </p>
-                      <button
-                        onClick={() => {
-                          if (!isCameraActive) setIsCameraActive(true);
-                          setTryOnMode('video');
-                          startCalibration();
-                        }}
-                        className="bg-bel-dark text-white px-6 py-3 rounded-xl font-medium hover:bg-bel-accent hover:text-bel-dark transition-all w-full flex items-center justify-center gap-2"
-                      >
-                        <Ruler size={18} />
-                        {t('vto.measure_btn')}
-                      </button>
-                    </div>
-                  )}
-
-                  {isMeasuring && !pd && (
-                    <div className="absolute inset-0 bg-white/80 flex items-center justify-center">
-                      <div className="flex items-center gap-2 text-bel-dark font-medium">
-                        <RefreshCw className="animate-spin" size={18} />
-                        {t('vto.measuring')}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-
+            <div className="flex justify-center">
               {/* Help & Appointment */}
-              <div className="bg-bel-light text-bel-dark rounded-3xl p-6 shadow-xl flex flex-col justify-center">
+              <div className="bg-bel-light text-bel-dark rounded-3xl p-6 shadow-xl flex flex-col justify-center max-w-2xl w-full">
                 <h3 className="font-serif text-xl font-bold mb-2">{t('vto.need_help') || "Besoin de conseils ?"}</h3>
                 <p className="text-sm text-bel-dark/70 mb-6">
                   {t('vto.help_desc') || "Prenez rendez-vous en magasin pour un essai physique."}

@@ -7,7 +7,7 @@ import { supabase } from '../lib/supabase';
 const testimonials = [
     {
         name: 'Marie L.',
-        text: 'Une équipe formidable ! J\'ai pu essayer mes lunettes en ligne et le résultat en boutique est impeccable.',
+        text: 'Une équipe formidable ! J\'ai pu essayer mes lunettes en ligne et le résultat dans nos Officines est impeccable.',
         rating: 5,
         city: 'Brazzaville'
     },
