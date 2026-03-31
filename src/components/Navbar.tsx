@@ -30,9 +30,9 @@ export default function Navbar() {
   return (
     <nav className="sticky top-0 z-40 bg-bel-light/90 backdrop-blur-md border-b border-bel-dark/10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-24 md:h-28 gap-2">
+        <div className="flex justify-between items-center h-24 lg:h-28 gap-2">
           {/* Mobile menu button */}
-          <div className="flex items-center md:hidden">
+          <div className="flex items-center lg:hidden">
             <button
               onClick={() => setIsOpen(!isOpen)}
               className="text-bel-dark hover:text-bel-accent transition-colors"
@@ -42,18 +42,18 @@ export default function Navbar() {
           </div>
 
           {/* Logo */}
-          <div className="flex-shrink-0 flex items-center justify-center flex-1 md:flex-none">
+          <div className="flex-shrink-0 flex items-center justify-center flex-1 lg:flex-none">
             <Link to="/" className="flex items-center">
               <img
                 src={logo}
                 alt="Bel'Optique"
-                className="h-20 md:h-28 w-auto"
+                className="h-20 lg:h-28 w-auto"
               />
             </Link>
           </div>
 
           {/* Desktop Menu */}
-          <div className="hidden md:flex md:items-center md:flex-wrap md:gap-x-5 md:gap-y-1 flex-1 justify-center">
+          <div className="hidden lg:flex lg:items-center lg:flex-wrap lg:gap-x-5 lg:gap-y-1 flex-1 justify-center">
             {navLinks.map((link) => (
               <Link
                 key={link.name}
@@ -70,7 +70,7 @@ export default function Navbar() {
           </div>
 
           {/* Icons & Language */}
-          <div className="flex items-center space-x-4 md:space-x-6">
+          <div className="flex items-center space-x-4 lg:space-x-6">
             <button
               onClick={() => setLanguage(language === 'fr' ? 'en' : 'fr')}
               className="flex items-center space-x-1 text-bel-dark hover:text-bel-accent transition-colors font-medium text-sm"
@@ -94,7 +94,7 @@ export default function Navbar() {
 
       {/* Mobile Menu */}
       {isOpen && (
-        <div className="md:hidden bg-bel-light border-b border-bel-dark/10">
+        <div className="lg:hidden bg-bel-light border-b border-bel-dark/10">
           <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
             {navLinks.map((link) => (
               <Link
