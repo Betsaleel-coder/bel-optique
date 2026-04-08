@@ -10,6 +10,10 @@ interface LanguageContextType {
 
 const translations: Record<Language, Record<string, string>> = {
   fr: {
+    'vto.mode_video': 'Mode Vidéo',
+    'vto.mode_video_desc': 'Essayez vos lunettes en direct avec votre caméra pour un rendu fluide.',
+    'vto.mode_photo': 'Mode Photo',
+    'vto.mode_photo_desc': 'Uploadez une photo de face pour un essai statique ultra-précis.',
     'nav.collections': 'Collections',
     'nav.vto': 'Essayage Virtuel',
     'nav.appointment': 'Rendez-vous',
@@ -203,6 +207,10 @@ const translations: Record<Language, Record<string, string>> = {
     'testimonial.client': 'Avis Client',
   },
   en: {
+    'vto.mode_video': 'Video Mode',
+    'vto.mode_video_desc': 'Try your glasses live with your camera for a fluid experience.',
+    'vto.mode_photo': 'Photo Mode',
+    'vto.mode_photo_desc': 'Upload a front-facing photo for a high-precision static trial.',
     'nav.collections': 'Collections',
     'nav.vto': 'Virtual Try-On',
     'nav.appointment': 'Appointment',

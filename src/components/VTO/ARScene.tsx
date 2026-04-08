@@ -109,6 +109,9 @@ export default function ARScene({ landmarksRef, videoElement, sourceWidth, sourc
         img.src = imageUrl;
     }, [imageUrl]);
 
+    const lastLmRef = useRef<any[] | null>(null);
+    const smoothedLmRef = useRef<any[] | null>(null);
+
     useEffect(() => {
         const canvas = canvasRef.current;
         if (!canvas) return;
@@ -153,55 +156,91 @@ export default function ARScene({ landmarksRef, videoElement, sourceWidth, sourc
                     offsetY = 0;
                 }
 
-                const lm = landmarksRef.current;
-                if (lm) {
+                const rawLm = landmarksRef.current;
+                
+                // -- Landmark Smoothing (EMA) --
+                if (rawLm) {
+                    if (!smoothedLmRef.current) {
+                        smoothedLmRef.current = [...rawLm];
+                    } else {
+                        // Adaptive Smoothing with Dead-Zone: 
+                        // If movement is extremely small, we lock the point (Dead-Zone).
+                        // Small movement = very strong smoothing (low alpha) for stability.
+                        // Large movement = less smoothing (higher alpha) for responsiveness.
+                        smoothedLmRef.current = rawLm.map((p: any, i: number) => {
+                            const prev = smoothedLmRef.current![i];
+                            const dist = Math.sqrt(Math.pow(p.x - prev.x, 2) + Math.pow(p.y - prev.y, 2));
+                            
+                            // 1. Dead-Zone (If change is invisible, don't move at all)
+                            if (dist < 0.0008) return prev; 
+
+                            // 2. Adaptive Alpha (Range 0.01 to 0.75)
+                            const minAlpha = 0.01; // Ultra-stable when slow
+                            const maxAlpha = 0.75;
+                            const sensitivity = 150; // Quicker transitions
+                            const alpha = Math.min(maxAlpha, minAlpha + dist * sensitivity);
+
+                            return {
+                                x: p.x * alpha + prev.x * (1 - alpha),
+                                y: p.y * alpha + prev.y * (1 - alpha),
+                                z: p.z * alpha + (prev.z || 0) * (1 - alpha)
+                            };
+                        });
+                    }
+                } else {
+                    smoothedLmRef.current = null;
+                }
+
+                const lm = smoothedLmRef.current;
+                
+                if (lm && glassesImage && lm[36] && lm[45]) {
                     ctx.save();
                     ctx.translate(offsetX, offsetY);
                     
-                    // -- Draw the loaded glasses image --
-                    if (glassesImage && lm[36] && lm[45]) {
-                        const px = (p: any) => ((1 - p.x) * renderWidth);
-                        const py = (p: any) => (p.y * renderHeight);
+                    const px = (p: any) => ((1 - p.x) * renderWidth);
+                    const py = (p: any) => (p.y * renderHeight);
 
-                        // Subject's right eye (indices 36-41) -> drawn on right due to mirror
-                        const eyeR_outer = lm[36];
-                        // Subject's left eye (indices 42-47) -> drawn on left
-                        const eyeL_outer = lm[45];
+                    // 36-41: right eye contour, 42-47: left eye contour
+                    const eyePoints = lm.slice(36, 48);
+                    let sumX = 0, sumY = 0;
+                    eyePoints.forEach((p: any) => {
+                        sumX += px(p);
+                        sumY += py(p);
+                    });
 
-                        const rx = px(eyeR_outer);
-                        const ry = py(eyeR_outer);
-                        const lx = px(eyeL_outer);
-                        const ly = py(eyeL_outer);
+                    // Center point: geometric mean of all 12 eye landmarks for maximum stability
+                    const centerX = sumX / 12;
+                    const centerY = sumY / 12;
 
-                        // Center point between the outer corners of both eyes
-                        const centerX = (lx + rx) / 2;
-                        const centerY = (ly + ry) / 2;
+                    // Reference coordinates (outer eye corners: 36 and 45) for rotation and scale
+                    const rxO = px(lm[36]), ryO = py(lm[36]);
+                    const lxO = px(lm[45]), lyO = py(lm[45]);
 
-                        // Rotation angle
-                        const angle = Math.atan2(ry - ly, rx - lx);
+                    // Rotation angle based on outer eye corners
+                    const angle = Math.atan2(ryO - lyO, rxO - lxO);
 
-                        // Width: distance between outer corners + some margin for the frames
-                        const dist = Math.sqrt(Math.pow(rx - lx, 2) + Math.pow(ry - ly, 2));
-                        
-                        // Human eye outer corner distance ~95mm. Standard glasses width ~142mm.
-                        // Ratio is approx 1.5x. Since the glassesImage is now tightly cropped to the frames,
-                        // targetWidth can be set exactly to 1.5 * dist!
-                        const targetWidth = dist * 1.5;
+                    // Distance between outer corners for scaling
+                    const dist = Math.sqrt(Math.pow(rxO - lxO, 2) + Math.pow(ryO - lyO, 2));
+                    
+                    // Standard scale factor
+                    const targetWidth = dist * 1.55; 
 
-                        const imgRatio = glassesImage.height / glassesImage.width;
-                        const targetHeight = targetWidth * imgRatio;
+                    const imgRatio = glassesImage.height / glassesImage.width;
+                    const targetHeight = targetWidth * imgRatio;
 
-                        ctx.translate(centerX, centerY);
-                        ctx.rotate(angle);
-                        
-                        ctx.drawImage(
-                            glassesImage, 
-                            -targetWidth / 2, 
-                            -targetHeight * 0.50, // Vertical shift to rest the bridge on the nose 
-                            targetWidth, 
-                            targetHeight
-                        );
-                    }
+                    ctx.translate(centerX, centerY);
+                    ctx.rotate(angle);
+                    
+                    // Vertical adjustment: Shift down very slightly (3%) for perfect bridge alignment
+                    const verticalOffset = targetHeight * 0.03;
+
+                    ctx.drawImage(
+                        glassesImage, 
+                        -targetWidth / 2, 
+                        -targetHeight / 2 + verticalOffset, 
+                        targetWidth, 
+                        targetHeight
+                    );
                     ctx.restore();
                 }
             }

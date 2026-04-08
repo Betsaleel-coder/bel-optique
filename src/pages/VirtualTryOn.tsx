@@ -33,6 +33,7 @@ export default function VirtualTryOn() {
   const calibrationScaleRef = useRef<number | null>(null);
   const pdHistoryRef = useRef<number[]>([]);
   const { t } = useLanguage();
+  const frameCountRef = useRef(0);
 
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
@@ -57,16 +58,27 @@ export default function VirtualTryOn() {
 
   async function loadModels(faceapi: any, modelUrl: string) {
     try {
-      // Forcer le backend CPU pour éviter toute dépendance à WebGL
+      // Try to use a faster backend (WebGL or WASM) instead of CPU
       if (faceapi.tf) {
-        await faceapi.tf.setBackend('cpu');
+        console.log('Attempting to set WebGL backend...');
+        try {
+          await faceapi.tf.setBackend('webgl');
+        } catch (e) {
+          console.warn('WebGL not supported, falling back to WASM or CPU');
+          try {
+            await faceapi.tf.setBackend('wasm');
+          } catch (e2) {
+            await faceapi.tf.setBackend('cpu');
+          }
+        }
         await faceapi.tf.ready();
+        console.log('Using backend:', faceapi.tf.getBackend());
       }
       await Promise.all([
         faceapi.nets.tinyFaceDetector.loadFromUri(modelUrl),
         faceapi.nets.faceLandmark68Net.loadFromUri(modelUrl),
       ]);
-      console.log('face-api.js models loaded (CPU backend)');
+      console.log('face-api.js models loaded');
     } catch (e) {
       console.error('face-api model load error:', e);
     }
@@ -121,6 +133,7 @@ export default function VirtualTryOn() {
       }
     };
 
+
     const processLoop = async () => {
       const faceapi = (window as any).faceapi;
       if (!faceapi || !videoRef.current || !active) {
@@ -128,27 +141,32 @@ export default function VirtualTryOn() {
         return;
       }
 
+      // Optimization: No skipping for maximum stability now that WebGL is enabled.
+      // frameCountRef.current++;
       try {
-        const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.3 });
-        const result = await faceapi
-          .detectSingleFace(videoRef.current, options)
-          .withFaceLandmarks();
+        const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 });
+          const result = await faceapi
+            .detectSingleFace(videoRef.current, options)
+            .withFaceLandmarks();
 
-        if (result && active) {
-          const pts = result.landmarks.positions;
-          const vw = videoRef.current?.videoWidth || 640;
-          const vh = videoRef.current?.videoHeight || 480;
+          if (result && active) {
+            const pts = result.landmarks.positions;
+            const vw = videoRef.current?.videoWidth || 640;
+            const vh = videoRef.current?.videoHeight || 480;
 
-          // Construire un tableau de 68 points normalisés
-          const lm = pts.map((p: any) => ({ x: p.x / vw, y: p.y / vh, z: 0 }));
+            // Normalize landmarks
+            const lm = pts.map((p: any) => ({ x: p.x / vw, y: p.y / vh, z: 0 }));
 
-          landmarksRef.current = lm;
-          setLandmarks(lm);
-          handlePdUpdate(lm);
-        } else if (active) {
-          landmarksRef.current = null;
-        }
-      } catch (_) {}
+            landmarksRef.current = lm;
+            // Only trigger re-render if landmarks was null (to hide the loading overlay)
+            if (!landmarks) {
+              setLandmarks(lm);
+            }
+            handlePdUpdate(lm);
+          } else if (active) {
+            landmarksRef.current = null;
+          }
+        } catch (_) {}
 
       if (active) {
         animFrameRef.current = requestAnimationFrame(processLoop);
@@ -451,20 +469,34 @@ export default function VirtualTryOn() {
                 {!isCameraActive && tryOnMode !== 'photo' ? (
                   <div className="absolute inset-0 flex flex-col items-center justify-center p-4 sm:p-8 text-center bg-bel-dark/80 overflow-y-auto bel-scrollbar">
                     <h3 className="font-serif text-2xl sm:text-3xl font-medium mb-4 sm:mb-8 text-white mt-auto">{t('vto.title') || "Choisissez votre mode d'essai"}</h3>
-                    <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 mb-auto">
-                      {/* Mode Photo */}
+                    <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 mb-auto items-stretch">
+                      {/* Mode Vidéo (Live Interaction) */}
                       <div
-                        className="bg-white/5 p-4 sm:p-6 rounded-3xl border border-white/10 flex flex-col items-center hover:bg-white/10 transition-colors w-full sm:w-64 group cursor-pointer"
-                        onClick={() => setTryOnMode('photo')}
+                        className="bg-white/5 p-4 sm:p-6 rounded-3xl border border-white/10 flex flex-col items-center hover:bg-bel-accent/10 hover:border-bel-accent/30 transition-all w-full sm:w-72 group cursor-pointer shadow-xl"
+                        onClick={() => { setTryOnMode('video'); setIsCameraActive(true); }}
                       >
                         <div className="w-12 h-12 sm:w-16 sm:h-16 bg-bel-accent/20 rounded-full flex items-center justify-center mb-3 sm:mb-4 group-hover:bg-bel-accent transition-colors">
-                          <ImageIcon size={24} className="text-bel-accent group-hover:text-bel-dark transition-colors sm:hidden" />
-                          <ImageIcon size={32} className="text-bel-accent group-hover:text-bel-dark transition-colors hidden sm:block" />
+                          <Video size={32} className="text-bel-accent group-hover:text-bel-dark transition-colors" />
                         </div>
-                        <h4 className="text-lg sm:text-xl font-bold mb-1 sm:mb-2 text-white">Mode Photo</h4>
-                        <p className="text-xs sm:text-sm text-bel-light/60 mb-4 sm:mb-6 flex-grow">Uploadez une photo de face pour un essai statique ultra-précis.</p>
+                        <h4 className="text-lg sm:text-xl font-bold mb-1 sm:mb-2 text-white">{t('vto.mode_video')}</h4>
+                        <p className="text-xs sm:text-sm text-bel-light/60 mb-4 sm:mb-6 flex-grow text-center">{t('vto.mode_video_desc')}</p>
                         <button className="w-full bg-bel-accent text-bel-dark px-4 py-2 rounded-full font-bold hover:scale-105 transition-transform text-sm sm:text-base">
-                          Choisir
+                          {t('app.continue')}
+                        </button>
+                      </div>
+
+                      {/* Mode Photo */}
+                      <div
+                        className="bg-white/5 p-4 sm:p-6 rounded-3xl border border-white/10 flex flex-col items-center hover:bg-white/10 transition-colors w-full sm:w-72 group cursor-pointer"
+                        onClick={() => setTryOnMode('photo')}
+                      >
+                        <div className="w-12 h-12 sm:w-16 sm:h-16 bg-white/10 rounded-full flex items-center justify-center mb-3 sm:mb-4 group-hover:bg-white/20 transition-colors">
+                          <ImageIcon size={32} className="text-white/70 group-hover:text-white transition-colors" />
+                        </div>
+                        <h4 className="text-lg sm:text-xl font-bold mb-1 sm:mb-2 text-white">{t('vto.mode_photo')}</h4>
+                        <p className="text-xs sm:text-sm text-bel-light/60 mb-4 sm:mb-6 flex-grow text-center">{t('vto.mode_photo_desc')}</p>
+                        <button className="w-full bg-white/10 text-white px-4 py-2 rounded-full font-bold hover:bg-white/20 transition-all text-sm sm:text-base border border-white/10">
+                          {t('app.continue')}
                         </button>
                       </div>
                     </div>
@@ -653,10 +685,11 @@ export default function VirtualTryOn() {
                     )}
 
                     {!landmarks && !cameraError && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/40 z-20">
-                        <div className="text-center">
-                          <RefreshCw className="animate-spin mx-auto mb-4 text-bel-accent" size={32} />
-                          <p className="text-bel-light/50 font-mono text-sm uppercase tracking-widest">{t('vto.init_ar')}</p>
+                      <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 z-20 backdrop-blur-sm">
+                        <div className="text-center p-8 rounded-3xl bg-bel-dark/50 border border-white/10 shadow-2xl">
+                          <RefreshCw className="animate-spin mx-auto mb-6 text-bel-accent" size={48} />
+                          <p className="text-white font-serif text-xl mb-2">{t('vto.init_ar')}</p>
+                          <p className="text-bel-light/50 text-sm max-w-xs mx-auto">Veuillez rester bien face à la caméra pour la détection...</p>
                         </div>
                       </div>
                     )}
