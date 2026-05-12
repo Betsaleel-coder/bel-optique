@@ -61,6 +61,7 @@ export default function Catalog() {
         category: p.category,
         gender: p.gender || 'Unisex',
         image: p.image_url,
+        hoverImage: p.hover_image_url,
         isNew: p.is_new,
       }));
       setProducts(formattedData);

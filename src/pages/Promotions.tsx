@@ -23,6 +23,7 @@ export default function Promotions() {
         brand: p.brand,
         category: p.category,
         image: p.image_url,
+        hoverImage: p.hover_image_url,
         isNew: p.is_new,
       }));
       setProducts(formattedData);

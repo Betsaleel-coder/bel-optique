@@ -6,6 +6,7 @@ interface Product {
   name: string;
   brand?: string;
   image: string;
+  hoverImage?: string;
   category: string;
   isNew?: boolean;
 }

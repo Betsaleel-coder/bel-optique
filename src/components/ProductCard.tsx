@@ -7,11 +7,12 @@ interface ProductCardProps {
   name: string;
   brand?: string;
   image: string;
+  hoverImage?: string;
   category: string;
   isNew?: boolean;
 }
 
-export default function ProductCard({ id, name, brand, image, category, isNew }: ProductCardProps) {
+export default function ProductCard({ id, name, brand, image, hoverImage, category, isNew }: ProductCardProps) {
   const { t } = useLanguage();
   return (
     <motion.div
@@ -26,12 +27,27 @@ export default function ProductCard({ id, name, brand, image, category, isNew }:
           </span>
         )}
         
+        {/* Main Image */}
         <img
           src={image}
           alt={name}
-          className="w-full h-full object-contain transform group-hover:scale-110 transition-transform duration-1000 ease-out"
+          className={`w-full h-full object-contain transform transition-all duration-700 ease-out ${
+            hoverImage 
+              ? 'group-hover:opacity-0 group-hover:scale-105' 
+              : 'group-hover:scale-110'
+          }`}
           referrerPolicy="no-referrer"
         />
+
+        {/* Hover Image */}
+        {hoverImage && (
+          <img
+            src={hoverImage}
+            alt={`${name} hover`}
+            className="absolute inset-0 w-full h-full object-contain transform scale-95 opacity-0 group-hover:opacity-100 group-hover:scale-110 transition-all duration-700 ease-out p-4 sm:p-10"
+            referrerPolicy="no-referrer"
+          />
+        )}
         
         {/* Minimalist WhatsApp Always Visible - Miniature */}
         <a
