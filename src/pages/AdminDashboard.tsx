@@ -36,6 +36,7 @@ export default function AdminDashboard() {
         gender: 'Unisex',
         price: 0,
         image_url: '',
+        hover_image_url: '',
         model_3d_url: '',
         is_new: false,
         is_promotion: false,
@@ -43,6 +44,7 @@ export default function AdminDashboard() {
         description: '',
     });
     const [imageFile, setImageFile] = useState<File | null>(null);
+    const [hoverImageFile, setHoverImageFile] = useState<File | null>(null);
     const [tryOnImageFile, setTryOnImageFile] = useState<File | null>(null);
     const [uploading, setUploading] = useState(false);
 
@@ -198,6 +200,7 @@ export default function AdminDashboard() {
                 gender: product.gender || 'Unisex',
                 price: product.price || 0,
                 image_url: product.image_url || '',
+                hover_image_url: product.hover_image_url || '',
                 model_3d_url: product.model_3d_url || '',
                 is_new: product.is_new || false,
                 is_promotion: product.is_promotion || false,
@@ -213,6 +216,7 @@ export default function AdminDashboard() {
                 gender: 'Unisex',
                 price: 0,
                 image_url: '',
+                hover_image_url: '',
                 model_3d_url: '',
                 is_new: false,
                 is_promotion: false,
@@ -221,6 +225,7 @@ export default function AdminDashboard() {
             });
         }
         setImageFile(null);
+        setHoverImageFile(null);
         setTryOnImageFile(null);
         setIsModalOpen(true);
     };
@@ -235,6 +240,7 @@ export default function AdminDashboard() {
         setLoading(true);
         try {
             let finalImageUrl = formData.image_url;
+            let finalHoverImageUrl = formData.hover_image_url;
             let finalTryOnImageUrl = formData.model_3d_url;
 
             // Upload image if a new file is selected
@@ -255,6 +261,27 @@ export default function AdminDashboard() {
                     .getPublicUrl(filePath);
                 
                 finalImageUrl = publicUrl;
+                setUploading(false);
+            }
+
+            // Upload hover image
+            if (hoverImageFile) {
+                setUploading(true);
+                const fileExt = hoverImageFile.name.split('.').pop();
+                const fileName = `hover_${Math.random()}.${fileExt}`;
+                const filePath = `products/${fileName}`;
+
+                const { error: uploadError } = await supabase.storage
+                    .from('products')
+                    .upload(filePath, hoverImageFile);
+
+                if (uploadError) throw uploadError;
+
+                const { data: { publicUrl } } = supabase.storage
+                    .from('products')
+                    .getPublicUrl(filePath);
+                
+                finalHoverImageUrl = publicUrl;
                 setUploading(false);
             }
 
@@ -279,7 +306,7 @@ export default function AdminDashboard() {
                 setUploading(false);
             }
 
-            const submissionData = { ...formData, image_url: finalImageUrl, model_3d_url: finalTryOnImageUrl };
+            const submissionData = { ...formData, image_url: finalImageUrl, hover_image_url: finalHoverImageUrl, model_3d_url: finalTryOnImageUrl };
 
             if (editingId) {
                 const { error } = await supabase.from('products').update(submissionData).eq('id', editingId);
@@ -779,10 +806,44 @@ export default function AdminDashboard() {
                                     )}
                                 </div>
 
+                                <div className="p-4 border border-gray-100 rounded-xl bg-white mb-4 shadow-sm">
+                                    <label className="block text-base font-bold text-bel-dark mb-1">2. Photo de Survol (Hover Effect)</label>
+                                    <p className="text-xs text-bel-dark/60 mb-4">Cette photo apparaîtra au survol de la souris dans le catalogue.</p>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div>
+                                            <label className="block text-xs font-bold text-bel-dark/80 uppercase tracking-widest mb-2 text-bel-accent">Télécharger (Recommandé)</label>
+                                            <input
+                                                type="file"
+                                                accept="image/*"
+                                                onChange={(e) => setHoverImageFile(e.target.files ? e.target.files[0] : null)}
+                                                className="w-full px-4 py-3 bg-bel-gray/30 border border-gray-200 rounded-xl focus:ring-2 focus:ring-bel-accent outline-none text-sm cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-bel-accent/10 file:text-bel-accent hover:file:bg-bel-accent/20"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-bold text-bel-dark/40 uppercase tracking-widest mb-2">Ou utiliser une URL</label>
+                                            <input
+                                                type="url"
+                                                value={formData.hover_image_url}
+                                                onChange={(e) => setFormData({ ...formData, hover_image_url: e.target.value })}
+                                                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-bel-accent outline-none text-sm"
+                                                placeholder="https://..."
+                                            />
+                                        </div>
+                                    </div>
+                                    {formData.hover_image_url && (
+                                        <div className="mt-4 w-32 h-32 rounded-xl border border-gray-200 overflow-hidden bg-bel-gray relative group">
+                                            <img src={formData.hover_image_url} alt="Aperçu Hover" className="w-full h-full object-cover mix-blend-multiply" />
+                                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <span className="text-white text-xs font-medium">Aperçu Hover</span>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
                                 <div className="p-4 bg-bel-accent/5 border-2 border-bel-accent/30 rounded-xl shadow-sm">
                                     <label className="block text-base font-bold text-bel-dark mb-1 flex items-center gap-2">
                                         <Eye size={18} className="text-bel-accent" />
-                                        2. Photo d'Essayage Virtuel
+                                        3. Photo d'Essayage Virtuel
                                     </label>
                                     <p className="text-xs text-bel-dark/80 font-medium mb-4 bg-bel-accent/10 p-2 rounded-lg inline-block">
                                         ⚠️ OBLIGATOIRE : Cette image DOIT être un PNG transparent (sans arrière-plan) affichant la lunette parfaitement de face.
